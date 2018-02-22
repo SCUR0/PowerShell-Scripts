@@ -6,6 +6,8 @@
   Scans folders saved in variable recursively to check for files not compressed.
   Any files found not compressed, NTFS basic compression will apply.
 #>
+[cmdletbinding()]
+param ()
 
 #Folder directories to be checked for compression
 #The ones below are examples.
