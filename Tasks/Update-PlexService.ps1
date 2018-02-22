@@ -7,6 +7,8 @@
   This script will update that service when ran as another user.
   IMPORTANT: Change directory where plex stores updates!
 #>
+[cmdletbinding()]
+param ()
 
 #Change to directory that updates are stored. It is usually in local appdata of user the service runs as
 $updatedir = "C:\Users\plex\AppData\Local\Plex Media Server\Updates"
