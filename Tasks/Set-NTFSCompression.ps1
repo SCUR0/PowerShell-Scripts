@@ -1,3 +1,12 @@
+<#
+.SYNOPSIS
+  Sets NTFS compression to directories.
+
+.DESCRIPTION
+  Scans folders saved in variable recursively to check for files not compressed.
+  Any files found not compressed, NTFS basic compression will apply.
+#>
+
 #Folder directories to be checked for compression
 #The ones below are examples.
 
