@@ -12,10 +12,26 @@ param ()
 #change path to location you want the copies stored.
 $ExportPath="D:\Backup\VMs"
 $VMs=Get-VM
-foreach ($VM in $VMs) { 
+foreach ($VM in $VMs) {
+    $RemoveFail=$null
     if (Test-Path -Path $ExportPath\$($VM.Name)) {
-        Write-Verbose "Previous backup found, deleting."
-        Remove-Item -Path $ExportPath\$($VM.Name) -Force -Recurse -Confirm:$false
+        Write-Verbose "Previous backup found, moving temp."
+        try{
+            Rename-Item -Path $ExportPath\$($VM.Name) -NewName "$ExportPath\$($VM.Name).temp"
+        }catch{
+            $MoveFail=$true
+        }
     } 
-    Export-VM -Name $VM.Name -Path $ExportPath
+    if (!$MoveFail){
+        write-verbose "Exporting VM: $($VM.Name)."
+        try{
+            Export-VM -Name $VM.Name -Path $ExportPath
+        }catch{
+            $ExportFail = $true
+        }
+        if (!$ExportPath){
+            Write-Verbose "Export successful. Deleting old backup."
+            Remove-Item -Path "$ExportPath\$($VM.Name).temp" -Force -Recurse -Confirm:$false
+        }
+    }
 }
