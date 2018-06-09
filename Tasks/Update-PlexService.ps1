@@ -6,7 +6,7 @@
 .DESCRIPTION
   If plex is running as service, a script is needed to update.
   This script will update that service when ran as another user.
-  IMPORTANT: Change directory where plex stores updates as well a name of plex service!
+  IMPORTANT: Change directory where plex stores updates as well as the name of plex service!
 #>
 [cmdletbinding()]
 param ()
