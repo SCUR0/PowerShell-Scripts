@@ -28,6 +28,9 @@ foreach ($VM in $VMs) {
             Export-VM -Name $VM.Name -Path $ExportPath
         }catch{
             $ExportFail = $true
+            Write-Warning "Export failed, reverting backup."
+            Rename-Item -Path "$ExportPath\$($VM.Name).temp" -NewName "$ExportPath\$($VM.Name)"
+
         }
         if (!$ExportPath){
             Write-Verbose "Export successful. Deleting old backup."
