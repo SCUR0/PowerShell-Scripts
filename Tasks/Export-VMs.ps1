@@ -32,7 +32,7 @@ foreach ($VM in $VMs) {
             Rename-Item -Path "$ExportPath\$($VM.Name).temp" -NewName "$ExportPath\$($VM.Name)"
 
         }
-        if (!$ExportPath){
+        if (!$ExportFail){
             Write-Verbose "Export successful. Deleting old backup."
             Remove-Item -Path "$ExportPath\$($VM.Name).temp" -Force -Recurse -Confirm:$false
         }
