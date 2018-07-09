@@ -17,7 +17,7 @@ foreach ($VM in $VMs) {
     if (Test-Path -Path $ExportPath\$($VM.Name)) {
         Write-Verbose "Previous backup found, moving temp."
         try{
-            Rename-Item -Path $ExportPath\$($VM.Name) -NewName "$ExportPath\$($VM.Name).temp"
+            Rename-Item -Path $ExportPath\$($VM.Name) -NewName "$ExportPath\$($VM.Name).temp" -ErrorAction Stop
         }catch{
             $MoveFail=$true
         }
