@@ -25,7 +25,7 @@ foreach ($VM in $VMs) {
     if (!$MoveFail){
         write-verbose "Exporting VM: $($VM.Name)."
         try{
-            Export-VM -Name $VM.Name -Path $ExportPath
+            Export-VM -Name $VM.Name -Path $ExportPath -ErrorAction Stop
         }catch{
             $ExportFail = $true
             Write-Warning "Export failed, reverting backup."
