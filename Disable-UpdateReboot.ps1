@@ -8,6 +8,7 @@
     from re-enabling reboot task
 
 .NOTES
+    Requires admin permissions in order to set registry keys and permissions.
     Created by SCUR0
 
 .LINK
