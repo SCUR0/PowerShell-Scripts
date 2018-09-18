@@ -29,7 +29,7 @@ $FilehistoryLog = Get-WinEvent -LogName Microsoft-Windows-FileHistory-Core/WHC -
 $EmailFrom = "no-reply@domain.com"
 $EmailTo = "address@domain.com" 
 $Subject = "Warning: FileHistory has not ran in $checkhours hours." 
-$Body = "FileHistory has frozen. Please check status." 
+$Body = "FileHistory has frozen. Please check status on $env:COMPUTERNAME." 
 
 #change to SMTP server. I used Gmail's
 $SMTPServer = "smtp.gmail.com" 
