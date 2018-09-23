@@ -8,8 +8,8 @@
     from re-enabling reboot task
 
 .NOTES
-    Requires admin permissions in order to set registry keys and permissions.
-    Created by SCUR0
+    Script will have to be run again after feature updates. This is because windows wipes the windows directory during it's update process.
+    This script was created by SCUR0
 
 .LINK
     https://github.com/SCUR0/PowerShell-Scripts
@@ -33,6 +33,7 @@ $RebootTask="$env:WinDir\System32\Tasks\Microsoft\Windows\UpdateOrchestrator\Reb
 
 #Disable task
 try{
+    Write-Verbose "Disabling reboot task." -Verbose
     Get-ScheduledTask -TaskName Reboot -ErrorAction Stop | Disable-ScheduledTask -ErrorAction Stop | Out-Null
 }catch{
     Write-Warning "An error occurred while trying to set task to disabled. Verify system still has full permissions."
@@ -43,6 +44,7 @@ try{
 
 #SET ACL for registry key
 #grant user access via .net
+Write-Verbose "Modifying registry keys." -Verbose
 $key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey(`
     "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\Microsoft\Windows\UpdateOrchestrator\Reboot",`
     [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,[System.Security.AccessControl.RegistryRights]::ChangePermissions)
@@ -56,14 +58,15 @@ $key.SetAccessControl($acl)
 #remove inheritance
 $acl = Get-Acl -Path $RebootReg
 $acl.SetAccessRuleProtection($true,$false)
-$acl | Set-Acl
+$acl | Set-Acl -ErrorAction Stop
 
 #SET ACL for task file
 #Change owner
+Write-Verbose "Modifying scheduled task files." -Verbose
 $acl = Get-ACL -Path $RebootTask
 $Group = New-Object System.Security.Principal.NTAccount("$env:Username")
 $acl.SetOwner($Group)
-Set-Acl -Path $RebootTask -AclObject $acl
+Set-Acl -Path $RebootTask -AclObject $acl -ErrorAction Stop
 
 #remove and set permissions
 $acl = Get-ACL -Path $RebootTask
@@ -72,4 +75,7 @@ $ar = New-Object  system.security.accesscontrol.filesystemaccessrule("$env:Usern
 $acl.SetAccessRule($ar)
 $ar = New-Object  system.security.accesscontrol.filesystemaccessrule("System","ReadAndExecute","Allow")
 $acl.SetAccessRule($ar)
-Set-Acl -Path $RebootTask -AclObject $acl
+Set-Acl -Path $RebootTask -AclObject $acl -ErrorAction Stop
+
+Write-Verbose "Script complete." -Verbose
+Write-Warning "Script will need to be run again after a feature (new windows build) update."
