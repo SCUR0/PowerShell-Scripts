@@ -6,6 +6,8 @@ Personal collection of powershell scripts used at home
 ### Disable-UpdateReboot.ps1
 
   A Powershell script that will adjust the reboot task permissions in update orchestrator to prevent windows from automatically rebooting. The script will perminently disable auto reboot until the next feature update. This is due to how windows wipes the windows directory during updates.
+  
+  Changes have been made for 1809 but it is currently untested.
 
 ### Tasks/Export-VMs.ps1
 
