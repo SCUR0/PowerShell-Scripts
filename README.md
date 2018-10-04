@@ -13,7 +13,7 @@ Personal collection of powershell scripts used at home
 
   Simple script that exports a copy of all VMs to a backup directory.
 
-### Tasks/Get-FileHistoryStatus.ps1
+### Tasks/Check-FileHistoryStatus.ps1
 
   Filehistory on windows 8-10 is known for randomly failing to run. I enjoy the feature of FileHistory tracking of files so I created a script that will email you if it has not ran in the specified time range.
 
