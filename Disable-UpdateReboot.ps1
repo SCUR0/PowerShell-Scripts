@@ -31,16 +31,11 @@ $RebootReg="Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVe
 $RebootTask="$env:WinDir\System32\Tasks\Microsoft\Windows\UpdateOrchestrator\Reboot"
 
 
-#Disable task
-try{
-    Write-Verbose "Disabling reboot task." -Verbose
-    Get-ScheduledTask -TaskName Reboot -ErrorAction Stop | Disable-ScheduledTask -ErrorAction Stop | Out-Null
-}catch{
-    Write-Warning "An error occurred while trying to set task to disabled. Verify system still has full permissions."
-    Write-Error $Error[0]
-    pause
-    break
-}
+#attempt to set task to disabled on older version
+
+Write-Verbose "Attepting to set task to disabled via task scheduler." -Verbose
+Get-ScheduledTask -TaskName Reboot -ErrorAction SilentlyContinue | Disable-ScheduledTask | Out-Null
+
 
 #SET ACL for registry key
 #grant user access via .net
@@ -67,6 +62,11 @@ $acl = Get-ACL -Path $RebootTask
 $Group = New-Object System.Security.Principal.NTAccount("$env:Username")
 $acl.SetOwner($Group)
 Set-Acl -Path $RebootTask -AclObject $acl -ErrorAction Stop
+
+#remove inheritance 
+$acl = Get-Acl -Path $RebootTask
+$acl.SetAccessRuleProtection($true,$false)
+$acl | Set-Acl -ErrorAction Stop
 
 #remove and set permissions
 $acl = Get-ACL -Path $RebootTask
