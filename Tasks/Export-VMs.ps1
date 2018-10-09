@@ -34,7 +34,7 @@ foreach ($VM in $VMs) {
         }
         if (!$ExportFail){
             Write-Verbose "Export successful. Deleting old backup."
-            Remove-Item -Path "$ExportPath\$($VM.Name).temp" -Force -Recurse -Confirm:$false
+            Remove-Item -Path "$ExportPath\$($VM.Name).temp" -Force -Recurse -Confirm:$false -ErrorAction SilentlyContinue
         }
     }
 }
