@@ -34,7 +34,7 @@ $RebootTask="$env:WinDir\System32\Tasks\Microsoft\Windows\UpdateOrchestrator\Reb
 #attempt to set task to disabled on older version
 
 Write-Verbose "Attepting to set task to disabled via task scheduler." -Verbose
-Get-ScheduledTask -TaskName Reboot -ErrorAction SilentlyContinue | Disable-ScheduledTask | Out-Null
+Get-ScheduledTask -TaskName Reboot -ErrorAction SilentlyContinue | Disable-ScheduledTask -ErrorAction SilentlyContinue | Out-Null
 
 
 #SET ACL for registry key
@@ -44,7 +44,7 @@ $key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey(`
     "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\Microsoft\Windows\UpdateOrchestrator\Reboot",`
     [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,[System.Security.AccessControl.RegistryRights]::ChangePermissions)
 $acl = $key.GetAccessControl()
-$rule = New-Object System.Security.AccessControl.RegistryAccessRule ("$env:Username","FullControl","Allow")
+$rule = New-Object System.Security.AccessControl.RegistryAccessRule ("BUILTIN\Administrators","FullControl","Allow")
 $acl.ResetAccessRule($rule)
 $rule = New-Object System.Security.AccessControl.RegistryAccessRule ("System","ReadKey","Allow")
 $acl.SetAccessRule($rule)
@@ -53,15 +53,15 @@ $key.SetAccessControl($acl)
 #remove inheritance
 $acl = Get-Acl -Path $RebootReg
 $acl.SetAccessRuleProtection($true,$false)
-$acl | Set-Acl -ErrorAction Stop
+$acl | Set-Acl
 
 #SET ACL for task file
 #Change owner
 Write-Verbose "Modifying scheduled task files." -Verbose
 $acl = Get-ACL -Path $RebootTask
-$Group = New-Object System.Security.Principal.NTAccount("$env:Username")
+$Group = New-Object System.Security.Principal.NTAccount("BUILTIN\Administrators")
 $acl.SetOwner($Group)
-Set-Acl -Path $RebootTask -AclObject $acl -ErrorAction Stop
+Set-Acl -Path $RebootTask -AclObject $acl
 
 #remove inheritance 
 $acl = Get-Acl -Path $RebootTask
@@ -75,7 +75,7 @@ $ar = New-Object  system.security.accesscontrol.filesystemaccessrule("$env:Usern
 $acl.SetAccessRule($ar)
 $ar = New-Object  system.security.accesscontrol.filesystemaccessrule("System","ReadAndExecute","Allow")
 $acl.SetAccessRule($ar)
-Set-Acl -Path $RebootTask -AclObject $acl -ErrorAction Stop
+Set-Acl -Path $RebootTask -AclObject $acl
 
 Write-Verbose "Script complete." -Verbose
 Write-Warning "Script will need to be run again after a feature (new windows build) update."
