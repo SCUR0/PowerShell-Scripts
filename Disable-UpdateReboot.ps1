@@ -66,7 +66,7 @@ if ($null -eq $acl){
 Write-Verbose "Modifying scheduled task files." -Verbose
 $acl = Get-ACL -Path $RebootTask -ErrorAction SilentlyContinue
 if ($null -eq $acl){
-    Write-Warning "Error encountered while trying to modify registry key for reboot"
+    Write-Warning "Error encountered while trying to modify task file for reboot"
     $Errors=$true
 }else{
     $Group = New-Object System.Security.Principal.NTAccount("BUILTIN\Administrators")
