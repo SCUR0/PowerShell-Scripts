@@ -28,8 +28,17 @@ If (!([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]
 
 #Variables
 $Errors=$null
-$RebootReg="Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\Microsoft\Windows\UpdateOrchestrator\Reboot"
+$RebootTaskError=$null
+$RebootRegKey="SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\Microsoft\Windows\UpdateOrchestrator\Reboot"
+$RebootReg="Registry::HKEY_LOCAL_MACHINE\$RebootRegKey"
 $RebootTask="$env:WinDir\System32\Tasks\Microsoft\Windows\UpdateOrchestrator\Reboot"
+$RegAdminRule = New-Object System.Security.AccessControl.RegistryAccessRule ("BUILTIN\Administrators","FullControl","Allow")
+$RegSystemRule = New-Object System.Security.AccessControl.RegistryAccessRule ("System","ReadKey","Allow")
+$RegUserRule = New-Object System.Security.AccessControl.RegistryAccessRule ($env:USERNAME,"FullControl","Allow")
+$FileAdminRule = New-Object System.Security.AccessControl.filesystemaccessrule ("BUILTIN\Administrators","FullControl","Allow")
+$FileSystemRule = New-Object System.Security.AccessControl.filesystemaccessrule ("System","ReadAndExecute","Allow")
+$FileUserRule = New-Object System.Security.AccessControl.filesystemaccessrule ($env:USERNAME,"FullControl","Allow")
+$owner = [Security.Principal.NTAccount]$env:USERNAME
 
 
 Function Enable-Privilege {
@@ -87,64 +96,73 @@ If (!(test-path $RebootTask)){
     #SET ACL for registry key
     #Set ownership
     Write-Verbose "Modifying registry keys." -Verbose
-    $key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey(`
-        "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\Microsoft\Windows\UpdateOrchestrator\Reboot",`
+    $key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($RebootRegKey,`
         [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,[System.Security.AccessControl.RegistryRights]::TakeOwnership)
-    $owner = [Security.Principal.NTAccount]'Administrators'
-    $acl = $key.GetAccessControl()
-    if ($null -eq $acl){
+    $RegACL = $key.GetAccessControl()
+    if ($null -eq $RegACL){
         Write-Warning "Error encountered while trying to modify registry for reboot"
         $Errors=$true
     }else{
-        $acl.SetOwner($owner)
-        $key.SetAccessControl($acl)
+        $RegACL.SetOwner($owner)
+        $key.SetAccessControl($RegACL)
 
-        #Remove system
-        $acl = $key.GetAccessControl()
-        $rule = New-Object System.Security.AccessControl.RegistryAccessRule ("BUILTIN\Administrators","FullControl","Allow")
-        $acl.ResetAccessRule($rule)
-        $rule = New-Object System.Security.AccessControl.RegistryAccessRule ("System","ReadKey","Allow")
-        $acl.SetAccessRule($rule)
-        $key.SetAccessControl($acl)
+        #Modify permissions
+        $RegACL = $key.GetAccessControl()
+        $RegACL.ResetAccessRule($RegAdminRule)
+        $RegACL.SetAccessRule($RegSystemRule)
+        $RegACL.SetAccessRule($RegUserRule)
+        $key.SetAccessControl($RegACL)
 
         #remove inheritance
-        $acl = Get-Acl -Path $RebootReg
-        $acl.SetAccessRuleProtection($true,$false)
-        $acl | Set-Acl
+        $RegACL = Get-Acl -Path $RebootReg
+        $RegACL.SetAccessRuleProtection($true,$false)
+        $RegACL | Set-Acl
     }
 
     #SET ACL for task file
     #Change owner
     Write-Verbose "Modifying scheduled task files." -Verbose
-    $acl = Get-ACL -Path $RebootTask -ErrorAction SilentlyContinue
-    if ($null -eq $acl){
+    $FileACL = Get-ACL -Path $RebootTask -ErrorAction SilentlyContinue
+    if ($null -eq $FileACL){
         Write-Warning "Error encountered while trying to modify task file for reboot"
         $Errors=$true
     }else{
-        $Group = New-Object System.Security.Principal.NTAccount("BUILTIN\Administrators")
-        $acl.SetOwner($Group)
-        Set-Acl -Path $RebootTask -AclObject $acl
+        $FileACL.SetOwner($owner)
+        Set-Acl -Path $RebootTask -AclObject $FileACL
 
         #remove inheritance 
-        $acl = Get-Acl -Path $RebootTask
-        $acl.SetAccessRuleProtection($true,$false)
-        $acl | Set-Acl -ErrorAction Stop
+        $FileACL = Get-Acl -Path $RebootTask
+        $FileACL.SetAccessRuleProtection($true,$false)
+        $FileACL | Set-Acl -ErrorAction Stop
 
         #remove and set permissions
-        $acl = Get-ACL -Path $RebootTask
-        $acl.Access | %{$acl.RemoveAccessRule($_)} |Out-Null
-        $ar = New-Object  system.security.accesscontrol.filesystemaccessrule("BUILTIN\Administrators","FullControl","Allow")
-        $acl.SetAccessRule($ar)
-        $ar = New-Object  system.security.accesscontrol.filesystemaccessrule("System","ReadAndExecute","Allow")
-        $acl.SetAccessRule($ar)
-        Set-Acl -Path $RebootTask -AclObject $acl
+        $FileACL = Get-ACL -Path $RebootTask
+        $FileACL.Access | %{$FileACL.RemoveAccessRule($_)} |Out-Null
+        $FileACL.SetAccessRule($FileAdminRule)
+        $FileACL.SetAccessRule($FileSystemRule)
+        $FileACL.SetAccessRule($FileUserRule)
+        Set-Acl -Path $RebootTask -AclObject $FileACL
     }
     if (!$Errors){
         #attempt to set task to disabled
         Write-Verbose "Attepting to set task to disabled via task scheduler." -Verbose
-        Get-ScheduledTask -TaskName Reboot | Disable-ScheduledTask | Out-Null
-        Write-Verbose "Script complete." -Verbose
-        Write-Warning "Script will need to be run again after a feature (new windows build) update."
+        try{
+            Get-ScheduledTask Reboot -ErrorAction Stop | Disable-ScheduledTask -ErrorAction Stop | Out-Null
+        }catch{
+            $RebootTaskError=$true
+        }
+        if (!$RebootTaskError){
+            #remove admin permissions
+            Write-Verbose "Restricting security permisions on registry and task file." -Verbose
+            $RegACL.RemoveAccessRule($RegAdminRule) | Out-Null
+            $key.SetAccessControl($RegACL)
+
+            $FileACL.RemoveAccessRule($FileAdminRule) | Out-Null
+            Set-Acl -Path $RebootTask -AclObject $FileACL
+
+            Write-Verbose "Script complete." -Verbose
+            Write-Warning "Script will need to be run again after a feature (new windows build) update."
+        }
     }else{
         Write-Output "Errors were encountered while attempting to make changes. The script was not successful."
     }
