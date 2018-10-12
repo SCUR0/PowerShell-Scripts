@@ -145,7 +145,7 @@ If (!(test-path $RebootTask)){
     }
     if (!$Errors){
         #attempt to set task to disabled
-        Write-Verbose "Attepting to set task to disabled via task scheduler." -Verbose
+        Write-Verbose "Attempting to set task to disabled via task scheduler." -Verbose
         try{
             Get-ScheduledTask Reboot -ErrorAction Stop | Disable-ScheduledTask -ErrorAction Stop | Out-Null
         }catch{
