@@ -16,7 +16,7 @@ $updatedir = "C:\Users\plex\AppData\Local\Plex Media Server\Updates"
 $PlexServiceName="plex"
 
 #looks for newest folder in update directory
-$updatedir2 = Get-ChildItem -Path $updatedir | Sort-Object LastAccessTime -Descending | Select-Object -First 1
+$updatedir2 = Get-ChildItem -Path $updatedir | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $latestupdate = Get-ChildItem -Path "$($updatedir2.pspath)\packages"| Sort-Object LastAccessTime -Descending | Select-Object -First 1
 
 Write-Host "Stopping Plex Service..." -ForegroundColor DarkYellow
