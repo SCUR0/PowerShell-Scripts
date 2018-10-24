@@ -22,7 +22,7 @@ foreach ($VM in $VMs) {
     Write-Progress -Activity "Backing up VMs" -Status "Exporting $($VM.Name) $($CurrentCount+1)/$VMCount" -PercentComplete $Percent -Id 1
     $RemoveFail=$null
     if (Test-Path -Path $ExportPath\$($VM.Name)) {
-        Write-Verbose "Previous backup found, moving temp." -Verbose
+        Write-Verbose "Previous backup found, moving temp."
         try{
             Rename-Item -Path $ExportPath\$($VM.Name) -NewName "$ExportPath\$($VM.Name).temp" -ErrorAction Stop
         }catch{
@@ -30,7 +30,7 @@ foreach ($VM in $VMs) {
         }
     } 
     if (!$MoveFail){
-        write-verbose "Exporting VM: $($VM.Name)." -Verbose
+        write-verbose "Exporting VM: $($VM.Name)."
         try{
             Export-VM -Name $VM.Name -Path $ExportPath -ErrorAction Stop
         }catch{
@@ -39,7 +39,7 @@ foreach ($VM in $VMs) {
             $ExportFail = $true
         }
         if (!$ExportFail){
-            Write-Verbose "Export successful. Deleting old backup." -Verbose
+            Write-Verbose "Export successful. Deleting old backup."
             Remove-Item -Path "$ExportPath\$($VM.Name).temp" -Force -Recurse -Confirm:$false -ErrorAction SilentlyContinue
         }
     }
