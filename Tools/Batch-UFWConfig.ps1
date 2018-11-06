@@ -23,7 +23,7 @@ param (
     [int]$port,
     [string]$protocol
 )
-$ConvertText="$($path.TrimEND('.txt'))-converted.txt"
+$ConvertText=[System.IO.StreamWriter]"$($path.TrimEND('.txt'))-converted.txt"
 $TextFile=Get-Content $path
 $TotalLines=$($TextFile | Measure-Object -Line).Lines
 $LinesDone=0
@@ -38,25 +38,25 @@ if ($port){
             foreach($line in $TextFile){
                 $percent = [math]::Round($LinesDone/$TotalLines*100)
                 Write-Progress -Activity Converting -Status "$percent% completed" -PercentComplete $percent
-                "### tuple ### allow any any 0.0.0.0/0 $Port $line in`n"+`
-                "-A ufw-user-input -p tcp -s $line --dport $Port -j ACCEPT`n" | Out-File $ConvertText -Append
+                $ConvertText.WriteLine("### tuple ### allow tcp $Port 0.0.0.0/0 $line in`n"+`
+                "-A ufw-user-input -p tcp --dport $Port -s $line -j ACCEPT`n")
                 $LinesDone++
             }
         }elseif ($protocol -eq "udp"){
             foreach($line in $TextFile){
                 $percent = [math]::Round($LinesDone/$TotalLines*100)
                 Write-Progress -Activity Converting -Status "$percent% completed" -PercentComplete $percent
-                "### tuple ### allow any any 0.0.0.0/0 $Port $line in`n"+`
-                "-A ufw-user-input -p udp -s $line --dport $Port -j ACCEPT`n" | Out-File $ConvertText -Append
+                $ConvertText.WriteLine("### tuple ### allow udp $Port 0.0.0.0/0 $line in`n"+`
+                "-A ufw-user-input -p udp --dport $Port -s $line -j ACCEPT`n")
                 $LinesDone++
             }
         }elseif ($protocol -eq "both"){
             foreach($line in $TextFile){
                 $percent = [math]::Round($LinesDone/$TotalLines*100)
                 Write-Progress -Activity Converting -Status "$percent% completed" -PercentComplete $percent
-                "### tuple ### allow any any 0.0.0.0/0 $Port $line in`n"+`
+                $ConvertText.WriteLine("### tuple ### allow any any 0.0.0.0/0 $Port $line in`n"+`
                 "-A ufw-user-input -p tcp -s $line --dport $Port -j ACCEPT`n"+`
-                "-A ufw-user-input -p udp -s $line --dport $Port -j ACCEPT`n" | Out-File $ConvertText -Append
+                "-A ufw-user-input -p udp -s $line --dport $Port -j ACCEPT`n")
                 $LinesDone++
             }
         }else{
@@ -68,7 +68,10 @@ else{
     foreach($line in $TextFile){
         $percent = [math]::Round($LinesDone/$TotalLines*100)
         Write-Progress -Activity Converting -Status "$percent% completed" -PercentComplete $percent
-        "### tuple ### allow any any 0.0.0.0/0 any $line in`n-A ufw-user-input -s $line -j ACCEPT`n" | Out-File $ConvertText -Append
+        $ConvertText.WriteLine("### tuple ### allow any any 0.0.0.0/0 any $line in`n-A ufw-user-input -s $line -j ACCEPT`n")
         $LinesDone++
     }
+}
+if ($LinesDone -ne 0){
+    $ConvertText.close()
 }
