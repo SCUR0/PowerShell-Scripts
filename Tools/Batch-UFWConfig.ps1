@@ -38,7 +38,7 @@ if ($port){
             foreach($line in $TextFile){
                 $percent = [math]::Round($LinesDone/$TotalLines*100)
                 Write-Progress -Activity Converting -Status "$percent% completed" -PercentComplete $percent
-                $ConvertText.WriteLine("### tuple ### allow tcp $Port 0.0.0.0/0 $line in`n"+`
+                $ConvertText.WriteLine("### tuple ### allow tcp $Port 0.0.0.0/0 any $line in`n"+`
                 "-A ufw-user-input -p tcp --dport $Port -s $line -j ACCEPT`n")
                 $LinesDone++
             }
@@ -46,7 +46,7 @@ if ($port){
             foreach($line in $TextFile){
                 $percent = [math]::Round($LinesDone/$TotalLines*100)
                 Write-Progress -Activity Converting -Status "$percent% completed" -PercentComplete $percent
-                $ConvertText.WriteLine("### tuple ### allow udp $Port 0.0.0.0/0 $line in`n"+`
+                $ConvertText.WriteLine("### tuple ### allow udp $Port 0.0.0.0/0 any $line in`n"+`
                 "-A ufw-user-input -p udp --dport $Port -s $line -j ACCEPT`n")
                 $LinesDone++
             }
