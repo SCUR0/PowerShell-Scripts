@@ -24,3 +24,7 @@ Personal collection of powershell scripts used at home
 ### Tasks/Update-PlexService.ps1
   
   Update plex if you are running it as a service.
+  
+### Tools/Batch-UFWConfig.ps1
+  
+  This script takes a text file of IPs or IP subnets and converts it to be used with UFW config files. Useful for IP Geo firewall rules. You can copy paste output into config file to add rules.
