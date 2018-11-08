@@ -18,15 +18,27 @@ $VMs=Get-VM
 $VMCount=$VMs.count
 $CurrentCount=0
 foreach ($VM in $VMs) {
+    $TempPath="$ExportPath\$($VM.Name).temp"
+    $MoveFail=$null
+    $RemoveFail=$null
     $Percent=[math]::Round($CurrentCount/$VMCount*100)
     Write-Progress -Activity "Backing up VMs" -Status "Exporting $($VM.Name) $($CurrentCount+1)/$VMCount" -PercentComplete $Percent -Id 1
-    $RemoveFail=$null
     if (Test-Path -Path $ExportPath\$($VM.Name)) {
         Write-Verbose "Previous backup found, moving temp."
-        try{
-            Rename-Item -Path $ExportPath\$($VM.Name) -NewName "$ExportPath\$($VM.Name).temp" -ErrorAction Stop
-        }catch{
-            $MoveFail=$true
+        if (!(Test-Path $TempPath)){
+            try{
+                Rename-Item -Path $ExportPath\$($VM.Name) -NewName $TempPath -ErrorAction Stop
+            }catch{
+                $MoveFail=$true
+            }
+        }else{
+            Write-Verbose "Temp folder already found for $($VM.Name). Deleting"
+            Remove-Item -Path $TempPath -Force -Recurse -Confirm:$false
+            try{
+                Rename-Item -Path $ExportPath\$($VM.Name) -NewName $TempPath -ErrorAction Stop
+            }catch{
+                $MoveFail=$true
+            }
         }
     } 
     if (!$MoveFail){
@@ -35,12 +47,12 @@ foreach ($VM in $VMs) {
             Export-VM -Name $VM.Name -Path $ExportPath -ErrorAction Stop
         }catch{
             Write-Warning "Export failed, reverting backup."
-            Rename-Item -Path "$ExportPath\$($VM.Name).temp" -NewName "$ExportPath\$($VM.Name)"
+            Rename-Item -Path $TempPath -NewName "$ExportPath\$($VM.Name)"
             $ExportFail = $true
         }
         if (!$ExportFail){
             Write-Verbose "Export successful. Deleting old backup."
-            Remove-Item -Path "$ExportPath\$($VM.Name).temp" -Force -Recurse -Confirm:$false -ErrorAction SilentlyContinue
+            Remove-Item -Path $TempPath -Force -Recurse -Confirm:$false -ErrorAction SilentlyContinue
         }
     }
     $CurrentCount++
