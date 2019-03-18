@@ -10,7 +10,7 @@
   Path to text file. Each IP or subnet needs to be a new line.
 
 .PARAMETER port
-  Port allowed. If left blank allows all ports for IPs in file.
+  Multi port accepted with comma. If left blank allows all ports for IPs in file.
 
 .PARAMETER protocol
   TCP, UDP, or both
