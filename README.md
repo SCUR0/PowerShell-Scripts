@@ -28,3 +28,6 @@ Personal collection of powershell scripts used at home. These were designed to r
 ### Tools/Batch-UFWConfig.ps1
   
   This script takes a text file of IPs or IP subnets and converts it to be used with UFW config files. Useful for IP Geo firewall rules. You can copy paste output into config file to add rules.
+
+### Tools/Compact-VMs.ps1
+  This script is used to automatically compact all of your dynamic virtual disks on all of your VMs. It will shut down VM if running, compact, and then boot VM if it was running before.
