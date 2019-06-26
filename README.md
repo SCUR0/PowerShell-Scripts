@@ -37,6 +37,10 @@ Personal collection of powershell scripts used at home. These were designed to r
 
 This script is used to automatically compact all of your dynamic virtual disks on all of your VMs. It will shut down VM if running, compact, and then boot VM if it was running before.
 
+### Get-CPUProcessLoad.ps1
+
+I use this script to get remote CPU load with top processes of remote machines. Can also be used local.
+
 ## Active Directory
 
 These use a config hash that needs to be modified to match local enviroment. These were designed for my work center.
