@@ -23,7 +23,7 @@ param (
 )
 
 $Script = {
-    #Two extra entries are added for calculating load
+    #Two extra entries are added for calculating load + 1 to include first program
     $Processes = $args[0] + 3
     $Output = @()
     $CPUStats = Get-Counter '\Process(*)\% Processor Time' -ErrorAction SilentlyContinue | `
