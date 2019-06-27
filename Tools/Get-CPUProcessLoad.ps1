@@ -33,18 +33,18 @@ $Script = {
         Select-Object -First $Processes
 
     $Output += New-Object PSCustomObject -Property `
-        @{Program = "Total"; Percent = [math]::ROUND(1 - ($CPUStats[1].CookedValue / $CPUStats[0].CookedValue),4).tostring("P")}
+        @{Program = "Total"; Load = [math]::ROUND(1 - ($CPUStats[1].CookedValue / $CPUStats[0].CookedValue),4).tostring("P")}
 
     For ($i = 2; $i -lt ($CPUStats.Length - 1); $i++){
         $Output += New-Object PSCustomObject -Property `
-            @{Program = $CPUStats[$i].InstanceName; Percent = [math]::ROUND(($CPUStats[$i].CookedValue / $CPUStats[0].CookedValue),4).tostring("P")}
+            @{Program = $CPUStats[$i].InstanceName; Load = [math]::ROUND(($CPUStats[$i].CookedValue / $CPUStats[0].CookedValue),4).tostring("P")}
     }
-    Write-Output $Output | Select-Object Program,Percent
+    Write-Output $Output | Select-Object Program,Load
 
 }
 
 if ($ComputerName -eq "localhost"){
     Invoke-command -ArgumentList $Processes -ScriptBlock $Script
 }else{
-    Invoke-command -ComputerName $ComputerName -ArgumentList $Processes -ScriptBlock $Script
+    Invoke-command -ComputerName $ComputerName -ArgumentList $Processes -ScriptBlock $Script | select-object -Property Program,Load
 }
