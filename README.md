@@ -41,6 +41,10 @@ This script is used to automatically compact all of your dynamic virtual disks o
 
 I use this script to get remote CPU load with top processes of remote machines. Can also be used local.
 
+### Toggle-Service.ps1
+
+A simple script for toggleing a service (start/stop). Remote ComputerName supported.
+
 ## Active Directory
 
 These use a config hash that needs to be modified to match local enviroment. These were designed for my work center.
