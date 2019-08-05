@@ -37,6 +37,10 @@ Personal collection of powershell scripts used at home. These were designed to r
 
 This script is used to automatically compact all of your dynamic virtual disks on all of your VMs. It will shut down VM if running, compact, and then boot VM if it was running before.
 
+### Disable-NTFSCompression.ps1
+  
+  Recusive NTFS uncompression for a directory or more.
+
 ### Get-CPUProcessLoad.ps1
 
 I use this script to get remote CPU load with top processes of remote machines. Can also be used local.
