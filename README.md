@@ -45,6 +45,10 @@ This script is used to automatically compact all of your dynamic virtual disks o
 
 I use this script to get remote CPU load with top processes of remote machines. Can also be used local.
 
+### Get-Logins.ps1
+
+Audit RDP and SMB logins. Login auditing will need to be enabled in local policy.
+
 ### Toggle-Service.ps1
 
 A simple script for toggleing a service (start/stop). Remote ComputerName supported.
