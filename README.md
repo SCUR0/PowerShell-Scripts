@@ -19,6 +19,10 @@ Personal collection of powershell scripts used at home. These were designed to r
 
   Filehistory on windows 8-10 is known for randomly failing to run. I enjoy the feature of FileHistory tracking of files so I created a script that will email you if it has not ran in the specified time range.
 
+### Get-PendingRestarts
+  
+  Both scripts are needed if you want the process to be hidden from the user except for prompts. Both scripts **need to be placed in** `$env:APPDATA\AdminScripts\`. Create a group policy to create a scheduled task to run `Get-PendingRestartSilent.vbs` throughout the day.
+
 ### Set-NTFSCompression.ps1
   
   Compress specified folders using NTFS compression. Very useful for saving space in areas that don't have high IO. I was unable to find any negative performance impact.
