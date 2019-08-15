@@ -21,7 +21,7 @@ Personal collection of powershell scripts used at home. These were designed to r
 
 ### Get-PendingRestarts
   
-  Both scripts are needed if you want the process to be hidden from the user except for prompts. Both scripts **need to be placed in** `$env:APPDATA\AdminScripts\`. Create a group policy to create a scheduled task to run `Get-PendingRestartSilent.vbs` throughout the day.
+  Both scripts are needed if you want the process to be hidden from the user except for prompts. Both scripts **need to be placed in** `$env:APPDATA\AdminScripts\`. Create a group policy to create a scheduled task to run `Get-PendingRestartSilent.vbs` throughout the day. **Run as script as user not system.**
 
 ### Set-NTFSCompression.ps1
   
