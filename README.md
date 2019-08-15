@@ -70,6 +70,6 @@ Used for account closure in a hyprid office 365 enviroment. No files, accounts, 
 Searches multiple network locations for user files and then moves via robocopy.
 
 
-### ShareOnlineEmailAccount.ps1
+### Share-OnlineEmailAccount.ps1
 
 Set a mailbox to be shared to another via office 365.
