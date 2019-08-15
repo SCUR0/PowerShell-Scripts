@@ -1,5 +1,5 @@
 # PowerShell-Scripts
-Personal collection of powershell scripts used at home. These were designed to run on Powershell for Windows.
+Personal collection of powershell scripts used at home and a few work scripts. These were designed to run on Powershell for Windows.
 
 ***
 
