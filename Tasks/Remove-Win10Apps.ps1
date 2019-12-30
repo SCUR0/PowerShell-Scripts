@@ -3,7 +3,7 @@
     Removes uneeded windows 10 apps
 
 .DESCRIPTION
-	Removes both installed apps and provisioned packages if they exists.
+    Removes both installed apps and provisioned packages if they exists.
 #>
 
 [CmdletBinding()]
