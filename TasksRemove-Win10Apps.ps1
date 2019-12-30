@@ -50,12 +50,10 @@ foreach ($App in $AppArrayList) {
             try {
                 Write-Verbose  "Removing AppxProvisioningPackage: $($AppProvisioningPackageName)" -Verbose
                 Remove-AppxProvisionedPackage -PackageName $AppProvisioningPackageName -Online -ErrorAction Stop | Out-Null
-            }
-            catch [System.Exception] {
+            } catch [System.Exception] {
                 Write-Error  "Removing AppxProvisioningPackage '$($AppProvisioningPackageName)' failed: $($_.Exception.Message)"
             }
-        }
-        else {
+        } else {
             Write-Warning  "Unable to locate AppxProvisioningPackage for current app: $($App)"
         }
     }
@@ -70,8 +68,7 @@ foreach ($App in $AppArrayList.Name) {
             try {
                 Write-Verbose  "Removing AppxPackage: $App" -Verbose
                 Remove-AppxPackage -Package $AppPackageFullName -AllUsers -ErrorAction Stop | Out-Null
-            }
-            catch [System.Exception] {
+            } catch [System.Exception] {
                 Write-Error  "Removing AppxPackage $App failed: $($_.Exception.Message)"
             }
         }
