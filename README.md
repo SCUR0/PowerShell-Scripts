@@ -8,18 +8,21 @@ Personal collection of powershell scripts used at home and a few work scripts. T
   A Powershell script that will adjust the reboot task permissions in update orchestrator to prevent windows from automatically rebooting. The script will perminently disable auto reboot until the next feature update. This is due to how windows wipes the windows directory during updates.
   
   Changes have been made for 1809.
+  
+### Remove-Win10Apps.ps1
+  Removes both installed apps and provisioned packages for commonly unwanted windows 10 apps. Blacklist can be customized.
 
 ## Tasks
-
-### Export-VMs.ps1
-
-  Simple script that exports a copy of all VMs to a backup directory.
 
 ### Check-FileHistoryStatus.ps1
 
   Filehistory on windows 8-10 is known for randomly failing to run. I enjoy the feature of FileHistory tracking of files so I created a script that will email you if it has not ran in the specified time range.
+  
+### Export-VMs.ps1
 
-### Get-PendingRestarts
+  Simple script that exports a copy of all VMs to a backup directory.
+
+### Get-PendingRestarts.ps1
   
   Both scripts are needed if you want the process to be hidden from the user except for prompts. Both scripts **need to be placed in** `$env:APPDATA\AdminScripts\`. Create a group policy to create a scheduled task to run `Get-PendingRestartSilent.vbs` throughout the day. **Run vbs script as user not system.**
 
