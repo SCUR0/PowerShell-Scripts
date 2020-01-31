@@ -14,6 +14,11 @@ param (
     $ExportPath="D:\Backup\VMs"
 )
 
+if(!(Test-Path $ExportPath)){
+    Write-Error "Unable to access path $ExportPath. Verify access and run again."
+    exit
+}
+
 $VMs=Get-VM
 $VMCount=$VMs.count
 $CurrentCount=0
