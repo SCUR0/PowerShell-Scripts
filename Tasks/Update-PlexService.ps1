@@ -20,22 +20,17 @@
 [cmdletbinding()]
 param (
 	$ServiceName="plex",
+	$User="media",
 	$UpdateDir
 )
 
 if (!$UpdateDir){
-    $UpdateDirParam = $false
-    #Determine Account service is running as
-    $ServiceDetails= Get-CimInstance -Query "SELECT * FROM win32_service WHERE Name =`'$ServiceName`'"
-    $User = $ServiceDetails.StartName -replace "\.\\",""
 	#Default download locations
-	if ($User -eq "NT Authority\LocalService"){
+	if ($User -eq "Local Service"){
 		$UpdateDir = "$($env:windir)\system32\config\systemprofile\AppData\Local\Plex Media Server\Updates"
 	}else{
 		$UpdateDir = "C:\Users\$User\AppData\Local\Plex Media Server\Updates"
 	}
-}else{
-    $UpdateDirParam = $true
 }
 
 #looks for newest folder in update directory
@@ -69,13 +64,9 @@ if ($latestupdate){
 		}
 		Start-Service $ServiceName -PassThru
 		#Delete Update
-		Write-Output "Deleting leftover update file"
-		Remove-Item $UpdateDir2 -Recurse
+		Write-Output "Deleting leftover update files"
+		Remove-Item "$UpdateDir/*" -Recurse
 	}
 }else{
-	if ($UpdateParam){
-        Write-Error "No update file found in $UpdateDir. Verify folder is correct."
-    }else{
-        Write-Error "No update found in the default update directory of $UpdateDir. Try running the update script again with custom update directory parameter."
-    }
+	Write-Error "No update file found in $UpdateDir. Verify folder is correct."
 }
