@@ -35,7 +35,7 @@ if (!$UpdateDir){
 
 #looks for newest folder in update directory
 $UpdateDir2 = Get-ChildItem -Path $UpdateDir | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-$latestupdate = Get-ChildItem -Path "$($UpdateDir2.pspath)\packages"| Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$latestupdate = Get-ChildItem -Path "$($UpdateDir2.pspath)\packages" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if ($latestupdate){
 	Write-Host "Stopping Plex Service..." -ForegroundColor DarkYellow
