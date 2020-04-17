@@ -17,6 +17,10 @@ Personal collection of powershell scripts used at home and a few work scripts. T
 ### Check-FileHistoryStatus.ps1
 
   Filehistory on windows 8-10 is known for randomly failing to run. I enjoy the feature of FileHistory tracking of files so I created a script that will email you if it has not ran in the specified time range.
+
+### Clear-StuckPrintQueue.ps1
+  
+  Checks for stuck print jobs on print server. It will first attempt to remove the errored job gracefully. If that fails it will stop the print service and remove job from files.
   
 ### Export-VMs.ps1
 
