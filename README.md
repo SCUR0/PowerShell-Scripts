@@ -60,6 +60,11 @@ I use this script to get remote CPU load with top processes of remote machines. 
 
 Audit RDP and SMB logins. Login auditing will need to be enabled in local policy.
 
+### Run-RemoteWindowsUpdates.ps1
+
+Automate windows updates and restarts on remote hosts. Installs and uses PSWindowsUpdate module.
+Script uses Register-ScheduledTask instead of Invoke-WUInstall because of issues/bugs on non domain computers.
+
 ### Toggle-Service.ps1
 
 A simple script for toggleing a service (start/stop). Remote ComputerName supported.
