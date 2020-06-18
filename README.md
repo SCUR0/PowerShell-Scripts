@@ -51,6 +51,10 @@ This script is used to automatically compact all of your dynamic virtual disks o
 ### Disable-NTFSCompression.ps1
   
   Recusive NTFS uncompression for a directory or more.
+  
+### Enter-RDPShadow.ps1
+  
+  Find console session and RDP shadow another user.
 
 ### Get-CPUProcessLoad.ps1
 
