@@ -36,7 +36,7 @@ if (Test-Connection $ComputerName -Count 2 -Quiet){
             $DisplayName = $env:Username
 
             #Send notify message of connection
-            $MessageTitle = "Remote Access From OHSD IS Dept"
+            $MessageTitle = "Remote Access From IS Dept"
             $MessageString = "$DisplayName is connecting to your computer."
             Try{
                 Send-RDUserMessage -HostServer $ComputerName -UnifiedSessionID $($Console.ID) `
