@@ -130,7 +130,7 @@ if ($ComputerName.Count -gt 1){
 						}else{
 							if (($UpdateLog[-1] -replace '\s+', ' ').split(" ")[2] -eq "Downloaded"){
                                 [int]$downloadnumber = ([regex]::Matches($UpdateLog, "Downloaded" )).count
-                                $ProgStatus = "Installing $((($UpdateLog[($downloadnumber + 3)]) -replace '\s+', ' ').split(" ",6)[5] -join ' ')"
+                                $ProgStatus = "Downloading $((($UpdateLog[($downloadnumber + 3)]) -replace '\s+', ' ').split(" ",6)[5] -join ' ')"
                             }else{
                                 $ProgStatus = (($UpdateLog[($installednumber + 3)]) -replace '\s+', ' ').split(" ",6)[3,5] -join ' '
                             }
