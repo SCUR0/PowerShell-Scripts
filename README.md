@@ -11,6 +11,30 @@ Personal collection of powershell scripts used at home and a few work scripts. T
   
 ### Remove-Win10Apps.ps1
   Removes both installed apps and provisioned packages for commonly unwanted windows 10 apps. Blacklist can be customized.
+  
+## Active Directory
+
+These use a config hash that needs to be modified to match local enviroment. These were designed for my work center.
+
+### Remove-UserHybrid.ps1
+
+Used for account closure in a hyprid office 365 enviroment. No files, accounts, or mailboxes are deleted, instead they are moved to archive locations. Archive-UserFiles.ps1 and ShareOnlineEmailAccount.ps1 are included as part of the script
+
+### Archive-UserFiles.ps1
+
+Searches multiple network locations for user files and then moves via robocopy.
+
+### Share-OnlineEmailAccount.ps1
+
+Set a mailbox to be shared to another via office 365.
+
+## System-Setup
+
+### Remove-Win10Apps.ps1
+
+Common Microsoft "bloat" is checked for and removed.
+
+It is recommended to run this during the image process such as an MDT task sequence.
 
 ## Tasks
 
@@ -76,20 +100,3 @@ Script uses Register-ScheduledTask instead of Invoke-WUInstall because of issues
 ### Toggle-Service.ps1
 
 A simple script for toggleing a service (start/stop). Remote ComputerName supported.
-
-## Active Directory
-
-These use a config hash that needs to be modified to match local enviroment. These were designed for my work center.
-
-### Remove-UserHybrid.ps1
-
-Used for account closure in a hyprid office 365 enviroment. No files, accounts, or mailboxes are deleted, instead they are moved to archive locations. Archive-UserFiles.ps1 and ShareOnlineEmailAccount.ps1 are included as part of the script
-
-### Archive-UserFiles.ps1
-
-Searches multiple network locations for user files and then moves via robocopy.
-
-
-### Share-OnlineEmailAccount.ps1
-
-Set a mailbox to be shared to another via office 365.
