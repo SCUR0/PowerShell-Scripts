@@ -11,8 +11,8 @@ Param()
 
 # Black list of appx packages to uninstall
 $BlackListedApps = @(
-	"king.com.FarmHeroesSaga",
-	"king.com.CandyCrushFriends",
+    "king.com.FarmHeroesSaga",
+    "king.com.CandyCrushFriends",
     "Microsoft.SkypeApp",
     "Microsoft.MicrosoftSolitaireCollection",
     "Microsoft.WindowsFeedbackHub",
