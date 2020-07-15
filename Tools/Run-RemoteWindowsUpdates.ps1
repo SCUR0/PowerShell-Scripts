@@ -90,7 +90,8 @@ if ($ComputerName.Count -gt 1){
 			}
 			#retrieves a list of available updates
 			write-output "Initiating PSWindowsUpdate on $ComputerName"
-			$updates = invoke-command -session $session -scriptblock {Get-wulist -NotCategory $Using:UpdateCats -MicrosoftUpdate -verbose}
+            $Script = [scriptblock]::Create("Get-wulist -NotCategory $UpdateCats -MicrosoftUpdate -verbose")
+			$updates = invoke-command -session $session -scriptblock $Script
 			$updatenumber = ($updates | Measure-Object).Count
             if (($updatenumber -eq 0) -and ($Restart)){
                 invoke-command -session $session -scriptblock {
