@@ -3,8 +3,8 @@
     Uninstalls unnecessary default applications
 
 .DESCRIPTION
-	Common Microsoft "bloat" is checked for and removed.
-	It is recommended to run this during the image process such as an MDT task sequence.
+    Common Microsoft "bloat" is checked for and removed.
+    It is recommended to run this during the image process such as an MDT task sequence.
 #>
 [CmdletBinding()]
 Param()
@@ -51,8 +51,7 @@ foreach ($App in $AppArrayList) {
         if ($AppProvisioningPackageName -ne $null) {
             Write-Verbose  "Removing AppxProvisioningPackage: $($AppProvisioningPackageName)" -Verbose
             Remove-AppxProvisionedPackage -PackageName $AppProvisioningPackageName -Online -ErrorAction SilentlyContinue | Out-Null
-        }
-        else {
+        } else {
             Write-Warning  "Unable to locate AppxProvisioningPackage for current app: $($App)"
         }
     }
