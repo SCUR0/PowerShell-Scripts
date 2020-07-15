@@ -10,13 +10,17 @@
 
 .PARAMETER Restart
 	Automatically reboot after updates are installed.
+
+.PARAMETER Drivers
+	Check for driver updates along with windows updates.
 #>
 
 [CmdletBinding()]
 param (
     [parameter(Mandatory=$true,Position=1)]
     $ComputerName,
-    [switch]$Restart
+    [switch]$Restart,
+    [switch]$Drivers
 )
 
 function Load-PSWindowsUpdate {
@@ -63,6 +67,11 @@ if ($ComputerName.Count -gt 1){
     }
 }else{
     $host.ui.RawUI.WindowTitle = "$ComputerName"
+	if ($Drivers){
+		$UpdateCats = 'Feature Packs'
+	}else{
+		$UpdateCats = 'Drivers','Feature Packs'
+	}
     If (Test-Connection -ComputerName $ComputerName -Count 1 -ErrorAction Ignore){        
         #starts up a remote powershell session to the computer
         write-output "Connecting to $ComputerName"
@@ -81,7 +90,7 @@ if ($ComputerName.Count -gt 1){
 			}
 			#retrieves a list of available updates
 			write-output "Initiating PSWindowsUpdate on $ComputerName"
-			$updates = invoke-command -session $session -scriptblock {Get-wulist -NotCategory "Feature Packs" -MicrosoftUpdate -verbose}
+			$updates = invoke-command -session $session -scriptblock {Get-wulist -NotCategory $Using:UpdateCats -MicrosoftUpdate -verbose}
 			$updatenumber = ($updates | Measure-Object).Count
             if (($updatenumber -eq 0) -and ($Restart)){
                 invoke-command -session $session -scriptblock {
@@ -94,12 +103,14 @@ if ($ComputerName.Count -gt 1){
 
 			#if there are available updates proceed with installing
 			if ($updates){
+
 				#remote command to install windows updates, creates a scheduled task on remote computer
 				if ($Restart){
-					$Script = {Install-WindowsUpdate -NotCategory 'Feature Packs' -AcceptAll -MicrosoftUpdate -AutoReboot | Out-File $env:ALLUSERSPROFILE\AdminScripts\PSWindowsUpdate.log}
+					$Script = "Install-WindowsUpdate -NotCategory `'$UpdateCats`' -AcceptAll -MicrosoftUpdate -AutoReboot | "
 				}else{
-					$Script = {Install-WindowsUpdate -NotCategory 'Feature Packs' -AcceptAll -MicrosoftUpdate -IgnoreReboot | Out-File $env:ALLUSERSPROFILE\AdminScripts\PSWindowsUpdate.log}
+					$Script = "Install-WindowsUpdate -NotCategory `'$UpdateCats`' -AcceptAll -MicrosoftUpdate -IgnoreReboot | "
 				}
+                $Script = [scriptblock]::Create($Script + ({Out-File $env:ALLUSERSPROFILE\AdminScripts\PSWindowsUpdate.log}).ToString())
 
                 Write-Verbose "Initiating Windows Updates" -Verbose
 
@@ -146,11 +157,13 @@ if ($ComputerName.Count -gt 1){
                 
                 if (!(Test-Connection $ComputerName -Count 2 -Quiet)){
                     Write-Error "Connection lost to $ComputerName"
-                    exit
+                    $host.ui.RawUI.WindowTitle = “$ComputerName Error”
+                    Exit
                 }
 				
 				Write-Progress -Activity "Installing Updates" -Completed
-                if ((Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $ComputerName).LastRunTime -ne "11/29/1999 11:00:00 PM"){
+                $EndTask = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $ComputerName
+                if ($EndTask.LastRunTime -ne "11/29/1999 11:00:00 PM" -and $EndTask.LastTaskResult -eq 0){
 				    Write-Host "Updates installed - $(get-date)" -ForegroundColor Green
 				    $host.ui.RawUI.WindowTitle = “$ComputerName updates completed”
 				    if ($Restart){

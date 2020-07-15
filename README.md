@@ -9,9 +9,6 @@ Personal collection of powershell scripts used at home and a few work scripts. T
   
   Changes have been made for 1809.
   
-### Remove-Win10Apps.ps1
-  Removes both installed apps and provisioned packages for commonly unwanted windows 10 apps. Blacklist can be customized.
-  
 ## Active Directory
 
 These use a config hash that needs to be modified to match local enviroment. These were designed for my work center.
