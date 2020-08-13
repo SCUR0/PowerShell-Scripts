@@ -92,8 +92,8 @@ if ($ComputerName.Count -gt 1){
 			write-output "Initiating PSWindowsUpdate on $ComputerName"
             $Script = [scriptblock]::Create("Get-wulist -NotCategory $UpdateCats -MicrosoftUpdate -verbose")
 			$updates = invoke-command -session $session -scriptblock $Script
-			$updatenumber = ($updates | Measure-Object).Count
-            if (($updatenumber -eq 0) -and ($Restart)){
+			$UpdateNumber = ($updates | Measure-Object).Count
+            if (($UpdateNumber -eq 0) -and ($Restart)){
                 invoke-command -session $session -scriptblock {
                     If (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"){
                         Write-Output "Pending restart flag found for $env:COMPUTERNAME. Restarting"
@@ -121,66 +121,73 @@ if ($ComputerName.Count -gt 1){
                 }
 
                 $action=New-ScheduledTaskAction -Execute powershell.exe -Argument "-command `"$Script`""
-                $StartTime=Invoke-Command -session $session -ScriptBlock {(get-date).AddSeconds(2)}
+                $StartTime=Invoke-Command -session $session -ScriptBlock {(get-date).AddSeconds(3)}
                 $trigger=New-ScheduledTaskTrigger -Once -At $StartTime
                 $settings=New-ScheduledTaskSettingsSet -StartWhenAvailable
                 $principal = New-ScheduledTaskPrincipal -UserId SYSTEM -LogonType ServiceAccount -RunLevel Highest
 
-                #$settings=New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Verbose:$false
 
                 Register-ScheduledTask -Action $action -Trigger $trigger -TaskName "PSWindowsUpdate" -Description "Windows Updates" `
                     -Settings $settings -Principal $principal -Force -Verbose:$false -CimSession $ComputerName | Out-Null
 
-				#Invoke-WUjob -ComputerName $ComputerName -Script $Script -Confirm:$false -RunNow -Credential $Credential -ErrorAction SilentlyContinue#>
+                #Pause to let task start
+                Start-Sleep -Seconds 5
+
 				#Show update status until the amount of installed updates equals the same as the amount of updates available
-                $installednumber = $downloadnumber = 0
+                $InstalledNumber = $DownloadNumber = 0
 				do {
 					if (Test-Path \\$ComputerName\c$\ProgramData\AdminScripts\PSWindowsUpdate.log){
 						$UpdateLog = Get-Content \\$ComputerName\c$\ProgramData\AdminScripts\PSWindowsUpdate.log
 						if (!$UpdateLog){
 							$ProgStatus = "Connecting to update servers"
 						}else{
-							if (($UpdateLog[-1] -replace '\s+', ' ').split(" ")[2] -eq "Downloaded"){
-                                [int]$downloadnumber = ([regex]::Matches($UpdateLog, "Downloaded" )).count
-                                $ProgStatus = "Downloading $((($UpdateLog[($downloadnumber + 3)]) -replace '\s+', ' ').split(" ",6)[5] -join ' ')"
+                            [int]$DownloadNumber = ([regex]::Matches($UpdateLog, "Downloaded" )).count
+							if ($DownloadNumber -ne $UpdateNumber){
+                                $ProgStatus = "Downloading $((($UpdateLog[($DownloadNumber + 3)]) -replace '\s+', ' ').split(" ",6)[5] -join ' ')"
                             }else{
-                                $ProgStatus = (($UpdateLog[($installednumber + 3)]) -replace '\s+', ' ').split(" ",6)[3,5] -join ' '
+                                $ProgStatus = (($UpdateLog[($InstalledNumber + 3)]) -replace '\s+', ' ').split(" ",6)[3,5] -join ' '
                             }
-                            [int]$installednumber = ([regex]::Matches($UpdateLog, "Installed|Failed" )).count
+                            [int]$InstalledNumber = ([regex]::Matches($UpdateLog, "Installed|Failed" )).count
 						}
-						Write-Progress -Activity "Installing Updates ($($installednumber + 1) of $updatenumber)" `
+                        if ($InstalledNumber -lt $UpdateNumber){
+                            $DisplayNumber = $InstalledNumber + 1
+                        }else{
+                            $DisplayNumber = $InstalledNumber
+                        }
+						Write-Progress -Activity "Installing Updates ($DisplayNumber of $UpdateNumber)" `
 							-Status $ProgStatus `
-							-PercentComplete ([Math]::Round($installednumber/$updatenumber*100));
+							-PercentComplete ([Math]::Round($InstalledNumber/$UpdateNumber*100));
 					}
+                    $TaskState = Get-ScheduledTask "PSWindowsUpdate" -CimSession $ComputerName
+                    $TaskInfo = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $ComputerName
+                    $PingState = Test-Connection $ComputerName -Count 2 -Quiet
 					start-sleep -Seconds 1
-				}until (($installednumber -eq $updatenumber) -or (!(Test-Connection $ComputerName -Count 3 -Quiet)) `
-                       -or ((Get-ScheduledTask "PSWindowsUpdate" -CimSession $ComputerName).State -ne "Running"))
+				}until ((!($PingState)) -or ($TaskState.State -ne "Running"))
                 
-                if (!(Test-Connection $ComputerName -Count 2 -Quiet)){
+                if (!($PingState)){
                     Write-Error "Connection lost to $ComputerName"
                     $host.ui.RawUI.WindowTitle = “$ComputerName Error”
                     Exit
                 }
 				
-				Write-Progress -Activity "Installing Updates" -Completed
-                $EndTask = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $ComputerName
-                if ($EndTask.LastRunTime -ne "11/29/1999 11:00:00 PM" -and $EndTask.LastTaskResult -eq 0){
-				    Write-Host "Updates installed - $(get-date)" -ForegroundColor Green
-				    $host.ui.RawUI.WindowTitle = “$ComputerName updates completed”
+				Write-Progress -Activity "Installing Updates" -Completed 
+                if ($TaskState.State -ne "Running" -and $TaskInfo.LastTaskResult -eq 0){  
+				    Write-Output "Update Task Ended - $(get-date)"
+				    $host.ui.RawUI.WindowTitle = “$ComputerName Task Completed”
 				    if ($Restart){
-                        if ($updatenumber -eq 1){
+                        if ($UpdateNumber -eq 1){
                             #Antivirus updates sometimes occur on second run and doesn't reboot afterwards
                             invoke-command -session $session -scriptblock {
                                 If (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"){
                                     Restart-Computer -Force -ErrorAction SilentlyContinue
                                 }
                             }
-                        }
-					
-                        Write-Output "If updates required restart, the computer will restart shortly"
-				    }
+                        }					
+                        Write-Output "If updates required restart, the computer will restart shortly"				 
+                    }
                 }else{
-                    Write-Warning "PSUpdate task did not run correctly. Verify time is correct on $ComputerName"
+                    $host.ui.RawUI.WindowTitle = “$ComputerName Error”
+                    Write-Warning "An error occured for update task on $ComputerName"
                 }
 			}else{
 				$host.ui.RawUI.WindowTitle = “$ComputerName up to date”
