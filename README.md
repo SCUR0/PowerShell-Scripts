@@ -35,6 +35,10 @@ It is recommended to run this during the image process such as an MDT task seque
 
 ## Tasks
 
+### Backup-VMs.ps1
+
+  Simple script that exports a copy of all VMs to a backup directory as well as compresses for archive with 7zip if installed.
+
 ### Check-FileHistoryStatus.ps1
 
   Filehistory on windows 8-10 is known for randomly failing to run. I enjoy the feature of FileHistory tracking of files so I created a script that will email you if it has not ran in the specified time range.
@@ -42,10 +46,6 @@ It is recommended to run this during the image process such as an MDT task seque
 ### Clear-StuckPrintQueue.ps1
   
   Checks for stuck print jobs on print server. It will first attempt to remove the errored job gracefully. If that fails it will stop the print service and remove job from files.
-  
-### Export-VMs.ps1
-
-  Simple script that exports a copy of all VMs to a backup directory.
 
 ### Get-PendingRestarts.ps1
   
