@@ -156,7 +156,8 @@ if ($ComputerName.Count -gt 1){
                         }
 						Write-Progress -Activity "Installing Updates ($DisplayNumber of $UpdateNumber)" `
 							-Status $ProgStatus `
-							-PercentComplete ([Math]::Round($InstalledNumber/$UpdateNumber*100));
+							-PercentComplete ([Math]::Round($InstalledNumber/$UpdateNumber*100))`
+							-Id 1
 					}
                     $TaskState = Get-ScheduledTask "PSWindowsUpdate" -CimSession $ComputerName
                     $TaskInfo = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $ComputerName
@@ -170,7 +171,7 @@ if ($ComputerName.Count -gt 1){
                     Exit
                 }
 				
-				Write-Progress -Activity "Installing Updates" -Completed 
+				Write-Progress -Activity "Installing Updates" -Completed -Id 1
                 if ($TaskState.State -ne "Running" -and $TaskInfo.LastTaskResult -eq 0){  
 				    Write-Output "Update Task Ended - $(get-date)"
 				    $host.ui.RawUI.WindowTitle = “$ComputerName Task Completed”
