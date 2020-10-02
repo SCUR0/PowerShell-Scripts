@@ -156,8 +156,8 @@ if ($ComputerName.Count -gt 1){
                         }
 						Write-Progress -Activity "Installing Updates ($DisplayNumber of $UpdateNumber)" `
 							-Status $ProgStatus `
-							-PercentComplete ([Math]::Round($InstalledNumber/$UpdateNumber*100))`
-							-Id 1
+							-PercentComplete ([Math]::Round($InstalledNumber/$UpdateNumber*100)) `
+                            -Id 1
 					}
                     $TaskState = Get-ScheduledTask "PSWindowsUpdate" -CimSession $ComputerName
                     $TaskInfo = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $ComputerName
@@ -172,7 +172,7 @@ if ($ComputerName.Count -gt 1){
                 }
 				
 				Write-Progress -Activity "Installing Updates" -Completed -Id 1
-                if ($TaskState.State -ne "Running" -and $TaskInfo.LastTaskResult -eq 0){  
+                if ($TaskState.State -ne "Running" -and ($TaskInfo.LastTaskResult -eq 0 -or $TaskInfo.LastTaskResult -eq 267014)){  
 				    Write-Output "Update Task Ended - $(get-date)"
 				    $host.ui.RawUI.WindowTitle = “$ComputerName Task Completed”
 				    if ($Restart){
@@ -188,7 +188,7 @@ if ($ComputerName.Count -gt 1){
                     }
                 }else{
                     $host.ui.RawUI.WindowTitle = “$ComputerName Error”
-                    Write-Warning "An error occured for update task on $ComputerName"
+                    Write-Warning "Task completed with an error."
                 }
 			}else{
 				$host.ui.RawUI.WindowTitle = “$ComputerName up to date”
