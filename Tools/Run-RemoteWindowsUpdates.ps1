@@ -133,6 +133,13 @@ if ($ComputerName.Count -gt 1){
                 #Pause to let task start
                 Start-Sleep -Seconds 5
 
+                #check if running else force to run
+                $TaskInfo = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $ComputerName
+                if ($TaskInfo.LastTaskResult -eq 267011){
+                    Start-ScheduledTask "PSWindowsUpdate" -CimSession $ComputerName
+                    Start-Sleep -Seconds 5
+                }
+
 				#Show update status until the amount of installed updates equals the same as the amount of updates available
                 $InstalledNumber = $DownloadNumber = 0
 				do {
@@ -172,7 +179,7 @@ if ($ComputerName.Count -gt 1){
                 }
 				
 				Write-Progress -Activity "Installing Updates" -Completed -Id 1
-                if ($TaskState.State -ne "Running" -and ($TaskInfo.LastTaskResult -eq 0 -or $TaskInfo.LastTaskResult -eq 267014)){  
+                if ($TaskState.State -ne "Running" -and ($TaskInfo.LastTaskResult -eq 0 -or $TaskInfo.LastTaskResult -eq 267014 -or $TaskInfo.LastTaskResult -eq 259)){  
 				    Write-Output "Update Task Ended - $(get-date)"
 				    $host.ui.RawUI.WindowTitle = “$ComputerName Task Completed”
 				    if ($Restart){
