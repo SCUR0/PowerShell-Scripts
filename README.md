@@ -27,6 +27,12 @@ Set a mailbox to be shared to another via office 365.
 
 ## System-Setup
 
+### Set-DefaultWallpaper.ps1
+
+Sets default wallpaper for computer but allows users to change.
+
+This is run during MDT image process. You will need the make the required resolutions and place in a 4k folder. See [here](https://www.winsysadminblog.com/2016/08/setting-the-default-wallpaper-on-a-windows-10-image-deployment-through-mdt/) for details on resolutions
+
 ### Remove-Win10Apps.ps1
 
 Common Microsoft "bloat" is checked for and removed.
