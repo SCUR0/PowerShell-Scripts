@@ -90,7 +90,7 @@ if ($ComputerName.Count -gt 1){
 			}
 			#retrieves a list of available updates
 			write-output "Initiating PSWindowsUpdate on $ComputerName"
-            $Script = [scriptblock]::Create("Get-wulist -NotCategory $UpdateCats -MicrosoftUpdate -verbose")
+            $Script = [scriptblock]::Create("Get-wulist -NotCategory $UpdateCats -NotTitle 'Feature Update' -MicrosoftUpdate -verbose")
 			$updates = invoke-command -session $session -scriptblock $Script
 			$UpdateNumber = ($updates | Measure-Object).Count
             if (($UpdateNumber -eq 0) -and ($Restart)){
@@ -107,9 +107,9 @@ if ($ComputerName.Count -gt 1){
 
 				#remote command to install windows updates, creates a scheduled task on remote computer
 				if ($Restart){
-					$Script = "Install-WindowsUpdate -NotCategory $UpdateCats -AcceptAll -MicrosoftUpdate -AutoReboot | "
+					$Script = "Install-WindowsUpdate -NotCategory $UpdateCats -NotTitle 'Feature Update' -AcceptAll -MicrosoftUpdate -AutoReboot | "
 				}else{
-					$Script = "Install-WindowsUpdate -NotCategory $UpdateCats -AcceptAll -MicrosoftUpdate -IgnoreReboot | "
+					$Script = "Install-WindowsUpdate -NotCategory $UpdateCats -NotTitle 'Feature Update' -AcceptAll -MicrosoftUpdate -IgnoreReboot | "
 				}
                 $Script = [scriptblock]::Create($Script + ({Out-File $env:ALLUSERSPROFILE\AdminScripts\PSWindowsUpdate.log}).ToString())
 
