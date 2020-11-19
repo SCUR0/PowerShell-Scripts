@@ -20,8 +20,8 @@ function RefreshWallpaper ($wallpaper){
 }
 
 #Set permissions
-takeown /f $env:windir\Web\Wallpaper\Windows\img0.jpg
-takeown /f $env:windir\Web\4K\Wallpaper\Windows\*.*
+takeown /f $env:windir\Web\Wallpaper\Windows\img0.jpg /a
+takeown /f $env:windir\Web\4K\Wallpaper\Windows\*.* /a
 icacls $env:windir\Web\Wallpaper\Windows\img0.jpg /Grant 'Administrators:(F)'
 icacls $env:windir\Web\4K\Wallpaper\Windows\*.* /Grant 'Administrators:(F)'
  
