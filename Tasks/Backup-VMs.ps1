@@ -72,6 +72,11 @@ if (Test-Path $7ZipExe){
         Write-Verbose "Compressing $CompletedVM"
         .$7ZipExe a "VMs-$(Get-Date -Format "yy-MM")" $CompletedVM -mmt4
     }
+    #Delete uncompressed files
+    Write-Verbose "Deleting temp files"
+    foreach ($CompletedVM in $CompletedVMs){
+        remove-item -Recurse -Force $CompletedVM
+    }
 }else{
     Write-Output "7zip can be used to compress and archive VMs. Install 7zip or use custom install path in launch arguments."
 }
