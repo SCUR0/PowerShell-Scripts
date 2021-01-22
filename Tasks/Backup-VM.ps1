@@ -37,6 +37,9 @@ if ($Name){
 }else{
     $VMs = Get-VM | Where-Object {$Exclude -notcontains $_.Name}
 }
+if ($VMs.Count -eq 0){
+    Write-Warning "No VMs found"
+}
 
 ###Variables###
 #check if 7zip is installed
@@ -105,7 +108,16 @@ if ($7Zip){
         $Percent=[math]::Round($CurrentCount/$StepCount*100)
         Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Status "Compressing $CompletedVM" -PercentComplete $Percent -Id 1
         $FileName = "$CompletedVM-$(Get-Date -Format "yy-MM-dd")"
-        .$7ZipExe a $FileName $CompletedVM -mmt4 -bsp1
+        .$7ZipExe a $FileName $CompletedVM -mmt4 -bsp1 | ForEach-Object {
+            if ($_ -match '\S'){
+                $String = ($_ | Out-String).Trim()
+                $CompPerc = ($String -split '%')[0]
+                if ($CompPerc -match '^[0-9]+$'){
+                    Write-Progress -Activity "Compressing" -Status "$CompPerc% Completed" -PercentComplete $CompPerc -Id 2
+                }
+            }
+        }
+        Write-Progress -Activity "Compressing" -Id 2 -Completed
         if (Test-Path "$FileName.7z"){
             Write-Verbose "Deleting uncompressed files"
             remove-item -Recurse -Force $CompletedVM
