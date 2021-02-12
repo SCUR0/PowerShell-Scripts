@@ -52,6 +52,7 @@ if (Test-Path $7ZipExe){
 }
 $CurrentCount=0
 $CompletedVMs = @()
+$ExportFail = $null
 
 
 foreach ($VM in $VMs) {
@@ -83,15 +84,21 @@ foreach ($VM in $VMs) {
         try{
             Export-VM -Name $VM.Name -Path $ExportPath -ErrorAction Stop
         }catch{
-            Write-Warning "Export failed"
-            if (Test-Path $TempPath){
+            Write-Warning "$($VM.Name) Export failed"
+                if (Test-Path $TempPath){
+                    if (Test-Path "$ExportPath\$($VM.Name)"){
+                        Remove-Item -Path "$ExportPath\$($VM.Name)" -Force -Recurse -Confirm:$false
+                    }
                 Rename-Item -Path $TempPath -NewName "$ExportPath\$($VM.Name)"
             }
             $ExportFail = $true
+            $CurrentCount++
         }
         if (!$ExportFail){
-            Write-Verbose "Export successful. Deleting old backup."
-            Remove-Item -Path $TempPath -Force -Recurse -Confirm:$false -ErrorAction SilentlyContinue
+            Write-Verbose "Export successful"
+            if (Test-Path $TempPath){
+                Remove-Item -Path $TempPath -Force -Recurse -Confirm:$false 
+            }
             $CompletedVMs += $VM.Name
         }
     }
@@ -101,7 +108,7 @@ foreach ($VM in $VMs) {
 Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Completed
 
 #Compress if 7zip is installed
-if ($7Zip){
+if ($7Zip -and ($CompletedVMs)){
     Write-Verbose "Compressing Exports"
     cd $ExportPath
 
