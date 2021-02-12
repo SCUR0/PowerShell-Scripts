@@ -83,8 +83,10 @@ foreach ($VM in $VMs) {
         try{
             Export-VM -Name $VM.Name -Path $ExportPath -ErrorAction Stop
         }catch{
-            Write-Warning "Export failed, reverting backup."
-            Rename-Item -Path $TempPath -NewName "$ExportPath\$($VM.Name)"
+            Write-Warning "Export failed"
+            if (Test-Path $TempPath){
+                Rename-Item -Path $TempPath -NewName "$ExportPath\$($VM.Name)"
+            }
             $ExportFail = $true
         }
         if (!$ExportFail){
