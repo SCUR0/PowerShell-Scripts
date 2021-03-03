@@ -55,7 +55,11 @@ It is recommended to run this during the image process such as an MDT task seque
 
 ### Get-PendingRestarts.ps1
   
-  Both scripts are needed if you want the process to be hidden from the user except for prompts. Both scripts **need to be placed in** `$env:APPDATA\AdminScripts\`. Create a group policy to create a scheduled task to run `Get-PendingRestartSilent.vbs` throughout the day. **Run vbs script as user not system.**
+  Both scripts are needed if you want the process to be hidden from the user except for prompts. 
+  
+  If you want to launch silently with the vbs script, both scripts **need to be placed in** `$env:APPDATA\AdminScripts\`. 
+  
+  Create a group policy to create a scheduled task to run `Get-PendingRestartSilent.vbs` throughout the day. **Run vbs script as user not system.**
 
 ### Set-NTFSCompression.ps1
   

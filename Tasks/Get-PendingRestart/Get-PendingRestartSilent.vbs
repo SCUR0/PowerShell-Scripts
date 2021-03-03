@@ -8,9 +8,6 @@ If vbArgs.Exists("DelayedRestart") Then
 	Args = Args & " -DelayedRestart"
 End If
 
-If vbArgs.Exists("Hour") Then
-	Args = Args & " -Hour " & vbArgs.Item("Hour")
-End If
 
 If vbArgs.Exists("RestartDays") Then
 	Args = Args & " -RestartDays " & vbArgs.Item("RestartDays")

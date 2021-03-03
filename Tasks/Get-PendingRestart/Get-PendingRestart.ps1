@@ -4,10 +4,7 @@
     Checks windows update restart status
 
 .DESCRIPTION
-	Checks windows update restart status.  
-	Get-PendingRestartSilent.vbs is required.
-	Both scripts need to be placed in $env:APPDATA\AdminScripts`.
-	Create a group policy to create a scheduled task to run Get-PendingRestartSilent.vbs throughout the day.
+	Checks windows update restart status.
 	
 .PARAMETER DelayedRestart
 	Parameter that flags that the user was already warned and to prepare for forced restart.
@@ -19,103 +16,57 @@
 .PARAMETER RestartDays
 	Sets max uptime in days. Default is set to 7.
 	
-.PARAMETER Hour
+.PARAMETER UpdateHour
 	Time at which forced restart occurs. Default is 17 or 5PM
+
+.PARAMETER ExclusionGroup
+	LDAP path to group for excluded computers. An example would be "CN=GRP_NoRestart,OU=Computers,DC=domain,DC=net"
 #>
 [cmdletbinding()]
 param(
     [switch]$DelayedRestart,
     [switch]$Test,
     #Amount of time before nag popup
-    $RestartDays=[int]7,
-    #Amount of time before forced restart
-    #$RestartDayDelay=[int]0,
+    [int]$RestartDays = 7,
     #Time (hour) of forced restart
-    $Hour=[int]17,
-	#Time (hour) that script is allowed to check for updates
-	$UpdateHour=[int]15
+    [int]$UpdateHour = 17,
+    [string]$ExclusionGroup
 )
 
 $Computer=$env:COMPUTERNAME
 $DelayRestart=$null
+$ExcludeRestart=$false
 $RestartTaskPending=$null
 $NoRestartTask=$null
 #Message Object
 $message = new-object -comobject wscript.shell
-
-function Get-CCMClientRebootPending {
-    #Checks if SCCM reports pending reboot
-    Try {
-	    $CCMClientRebootPending = Invoke-WmiMethod -Class CCM_ClientUtilities -Namespace root\ccm\clientsdk -Name DetermineIfRebootPending -ErrorAction Stop
-    } Catch {
-	    $CcmStatus = Get-Service -Name CcmExec -ErrorAction SilentlyContinue
-	    If ($CcmStatus.Status -ne 'Running') {
-	        Write-Warning "$Computer`: Error - CcmExec service is not running."
-	    }
-    }
-    Return $CCMClientRebootPending
-}
-
-function Get-CCMClientUpdates{
-    #pulls list of updates
-    Try {
-        $CCMClientUpdates = Get-CimInstance -ClassName CCM_SoftwareUpdate -Namespace root\CCM\ClientSDK -ErrorAction Stop
-    }catch{
-	    Write-Error "An error occured while pulling pending SCCM update list."
-    }
-    Return $CCMClientUpdates
-}
     
 function Check-PendingRestarts {
     #RebootRequired subkey 
     $AutoUpdateKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update"
-    $CCMReboots = Get-CCMClientRebootPending
 
-    If ($CCMReboots) {
-        Write-Verbose "SCCM service detected."
-	    If ($CCMReboots.ReturnValue -ne 0) {
-		    Write-Warning "Error: DetermineIfRebootPending returned error code $($CCMReboots.ReturnValue)"  
-	    }
-	    If ($CCMReboots.IsHardRebootPending -or $CCMReboots.RebootPending) {
-            Write-Verbose "SCCM Client reports pending reboot"
-            $SCCMUpdates = Get-CCMClientUpdates
-            $SCCMUpdateCount = ($SCCMUpdates| Measure-Object).Count
-            if ($SCCMUpdateCount -gt 0){
-                $PendingReboot = $True
-                $Output = $null
-                foreach ($Update in $SCCMUpdates){
-                    $Output += "`n$($Update.name)"
-                }
-                Write-Verbose "Updates found pending SCCM: $Output"
-            }else{
-                Write-Warning "SCCM reported pending restart but no updates were listed."
-            }
-	    }
-    }
     If (Test-Path -Path "$AutoUpdateKeyPath\RebootRequired"){
+		Write-EventLog -LogName Application -Source "Admin-Scripts" -EntryType Information -EventID 1 -Message "Registry flag for reboot pending is True"
         Write-Verbose "Registry flag for pending update found"
-        $PendingReboot = $True
-    }
-
-    If ($PendingReboot){
-        if ($SCCMUpdateCount -gt 1){
-            Return $SCCMUpdateCount
-        }else{
-            Return $True
-        }
+        Return $True
     }else{
-        Return $False
         Write-Verbose "No pending reboot flags found"
+		Return $False
+	}
+}
+
+if ($ExclusionGroup){
+    #Check if in exclusion group
+    $searcher = [adsisearcher]"(&(objectCategory=Computer)(name=$env:COMPUTERNAME))"
+    if ($searcher.FindOne().Properties.memberof -contains $ExclusionGroup){
+        Write-Verbose "Computer is in exclusion group. Exiting"
+        exit
     }
 }
 
-#Only run on workstations
+
+#Only run on non server and computers not part of exclusion group
 if ((Get-CimInstance -ClassName Win32_OperatingSystem).ProductType -eq 1){
-	#verify vbs script is in required folder
-	if (!(Test-Path "$env:APPDATA\AdminScripts\Get-PendingRestartSilent.vbs")){
-		Write-Error "Get-PendingRestartSilent.vbs is required for silent runs. Place in $env:APPDATA\AdminScripts"
-		Exit
-	}
     if ($Test){
         Write-Verbose "Test switch found. Setting date of last boot to 30 days ago."
         $LastBoot=(get-date).AddDays(-30)
@@ -135,7 +86,7 @@ if ((Get-CimInstance -ClassName Win32_OperatingSystem).ProductType -eq 1){
     #Check if task is already scheduled
 
     Try{
-        $RestartTask=Get-ScheduledTask "DelayedRestart - $env:USERNAME" -ErrorAction stop| Get-ScheduledTaskInfo
+        $RestartTask=Get-ScheduledTask "Admin - DelayedRestart - $env:USERNAME" -ErrorAction stop| Get-ScheduledTaskInfo
     }Catch{
         Write-Verbose "No DelayedRestart task found"
         $NoRestartTask=$true
@@ -152,33 +103,35 @@ if ((Get-CimInstance -ClassName Win32_OperatingSystem).ProductType -eq 1){
     If ($DelayedRestart){
         Write-Verbose "DelayedRestart switch active."
         #Runs if ForcedRestart Parameter is true and time is correct
-        if (((get-date).Hour -eq $Hour) -or $Test) {
+        if (((get-date).Hour -eq $UpdateHour) -or $Test) {
             $wmi = Get-WmiObject -Class win32_OperatingSystem
             if ((($wmi.ConvertToDateTime($wmi.LocalDateTime)–$wmi.ConvertToDateTime($wmi.LastBootUpTime)).Days -ge $RestartDays) -or (Check-PendingRestarts)){
+				#Determine if running as System and delay to avoice race condition
+                if ($env:USERNAME -eq $env:COMPUTERNAME+'$'){
+                    Start-Sleep -s 10
+                }               
+                Write-EventLog -LogName Application -Source "Admin-Scripts" -EntryType Information -EventID 2 -Message "Forcing restart."
                 Write-Verbose "Forced restart parameter. Starting restart countdown."
-                shutdown -r -t 120
+                shutdown -r -f -t 120
             }else{
+				Write-EventLog -LogName Application -Source "Admin-Scripts" -EntryType Information -EventID 2 -Message "Forced restart unnecessary. Uptime less than $RestartDays days."
                 Write-Verbose "Uptime is less than $RestartDays days. Aborting restart."
             }
         }else{
-			Write-Verbose "Forced restart was initiated at the incorrect time of $Hour hours. Aborting forced restart."
+			Write-Verbose "Restart task was initiated outside specified time. Hour is set as $UpdateHour"
+			Write-EventLog -LogName Application -Source "Admin-Scripts" -EntryType Information -EventID 3 `
+				-Message "Restart task was initiated outside specified time. Hour is set as $UpdateHour"
 		}
     }Elseif (!$RestartTaskPending){
         #Get date of forced restart
-        $ForcedRestartDate = get-date -Hour $Hour -Minute 0 -Second 0
-
+        $ForcedRestartDate = get-date -Hour $UpdateHour -Minute 0 -Second 0
         $restart = Check-PendingRestarts
 
         if ($restart){
-            if ($restart -is [int]){
-                $NumberString = "$restart updates"
-            }else{
-                $NumberString = "a pending update"
-            }
             $messagestring = 
-                "Your computer has $NumberString that requires restart.`nWould you like to restart now?"`
+                "Your computer has a pending update that requires restart.`nWould you like to restart now?"`
                 +"`nIf you select no, a restart will be scheduled at:`n$($ForcedRestartDate.tostring("M/d/yyyy hh:mm tt"))."
-            $Answer = $message.popup($messagestring,60,"Restart Pending!",4+48)
+            $Answer = $message.popup($messagestring,1800,"Restart Pending!",4+48)
 
             #If yes, restart
             If ($Answer -eq 6){
@@ -188,11 +141,13 @@ if ((Get-CimInstance -ClassName Win32_OperatingSystem).ProductType -eq 1){
             }
         #Checks if computer has been restarted
         }ElseIf ($Lastboot -and ($LastBoot -lt $DateLimit)){
+            Write-EventLog -LogName Application -Source "Admin-Scripts" -EntryType Information -EventID 1 `
+                -Message "No pending restarts were found but uptime is outside window. Computer was last booted $LastBoot."
             Write-Verbose "No pending restarts but computer has not been restarted at maximum threshold."
             $messagestring = 
                 "Your computer has not been restarted in $RestartDays days. Would you like to restart now?"`
                 +"`nIf you select no, a restart will be scheduled at:`n$($ForcedRestartDate.tostring("M/d/yyyy hh:mm tt"))."
-            $Answer=$message.popup($messagestring,60,"Restart Required!",4+48)
+            $Answer=$message.popup($messagestring,1800,"Restart Required!",4+48)
 
             #If yes, restart in one minute
             If ($Answer -eq 6){
@@ -206,35 +161,32 @@ if ((Get-CimInstance -ClassName Win32_OperatingSystem).ProductType -eq 1){
         If ($DelayRestart){
             Write-Verbose "Creating scheduled task to restart the computer later."
             $action=New-ScheduledTaskAction -Execute "$env:APPDATA\AdminScripts\Get-PendingRestartSilent.vbs" `
-                -Argument "/DelayedRestart /Hour:$Hour /RestartDays:$RestartDays"
+                -Argument "/DelayedRestart /Hour:$UpdateHour /RestartDays:$RestartDays"
             $trigger=New-ScheduledTaskTrigger -Once -At $ForcedRestartDate
-            $settings=New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Verbose:$false #-hidden
+            $settings=New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Verbose:$false
 
-        Register-ScheduledTask -Settings $settings -Action $action -Trigger $trigger -TaskName "DelayedRestart - $env:USERNAME" -Description "User delayed required restart" -Force -Verbose:$false | Out-Null
+        Register-ScheduledTask -Settings $settings -Action $action -Trigger $trigger -TaskName "Admin - DelayedRestart - $env:USERNAME" -Description "User delayed required restart" -Force -Verbose:$false | Out-Null
 
 
         }elseif($null -ne $DelayRestart){
             #Restart
             shutdown -r -t 00
         }else{
-            $CCMClient = Get-CCMClientRebootPending
-            if($CCMClient){
-                #Check only for updates on Wednesday and scheduled time
-                if (((get-date).DayOfWeek -eq "Wednesday") -and ((get-date).Hour -ge $UpdateHour)){
-                    Write-Verbose "All checks passed and scheduled time is true. Checking for updates on SCCM."
-                    #Checks for updates if any of the above was not true
-
-                    $ApplicationClass = [WmiClass]"root\ccm\clientSDK:CCM_SoftwareUpdatesManager"
-                    $Application = (Get-WmiObject -Namespace "root\ccm\clientSDK" -Class CCM_SoftwareUpdate `
-                        | Where-Object { $_.EvaluationState -like "*0*" -or $_.EvaluationState -like "*1*"})
-                    Invoke-WmiMethod -Class CCM_SoftwareUpdatesManager -Name InstallUpdates `
-                        -ArgumentList (,$Application) -Namespace root\ccm\clientsdk -ErrorAction Continue | Out-Null
-                }else{
-                    Write-Verbose "All checks passed and update audit was skipped due to current time."
-                }
-            }else{
-                Write-Verbose "SCCM service was not found but no pending updates were found and computer is within uptime window."
-            }
+			Write-EventLog -LogName Application -Source "Admin-Scripts" -EntryType Information -EventID 0 `
+                -Message "No pending restarts were found and uptime is within window. Computer was last booted $LastBoot."
+        }
+    }
+}else{
+    Write-Verbose "Restart check was skipped due to being in a group exclusion or a server OS." -Verbose
+    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    if ($currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){
+        if ($CTask = Get-ScheduledTask -TaskName "Admin - Get-PendingRestart Computer" -ErrorAction SilentlyContinue){
+            Write-Verbose "Scheduled task for computer found on device. Removing." -Verbose
+            $CTask | Unregister-ScheduledTask -Confirm:$false
+        }
+        if ($UTask = Get-ScheduledTask -TaskName "Admin - Get-PendingRestarts User" -ErrorAction SilentlyContinue){
+            Write-Verbose "Scheduled task for user found on device. Removing." -Verbose
+            $UTask | Unregister-ScheduledTask -Confirm:$false
         }
     }
 }
