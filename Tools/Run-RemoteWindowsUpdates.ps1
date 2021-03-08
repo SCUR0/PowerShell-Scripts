@@ -68,9 +68,9 @@ if ($ComputerName.Count -gt 1){
 }else{
     $host.ui.RawUI.WindowTitle = "$ComputerName"
 	if ($Drivers){
-		$UpdateCats = "'Feature Packs'"
-	}else{
 		$UpdateCats = "'Drivers','Feature Packs'"
+	}else{
+		$UpdateCats = "'Feature Packs'"
 	}
     If (Test-Connection -ComputerName $ComputerName -Count 1 -ErrorAction Ignore){        
         #Verify update task isn't still running
