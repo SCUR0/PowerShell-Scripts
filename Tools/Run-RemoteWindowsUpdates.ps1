@@ -75,7 +75,7 @@ if ($ComputerName.Count -gt 1){
     If (Test-Connection -ComputerName $ComputerName -Count 1 -ErrorAction Ignore){        
         #Verify update task isn't still running
         write-output "Connecting to $ComputerName"
-        if ((Get-ScheduledTask "PSWindowsUpdate" -CimSession $ComputerName).State -ne "Running"){
+        if ((Get-ScheduledTask "PSWindowsUpdate" -CimSession $ComputerName -ErrorAction Ignore).State -ne "Running"){
             #start remote powershell session to the computer
             $session = New-PSSession -ComputerName $ComputerName
 		    if ($session){
@@ -92,7 +92,7 @@ if ($ComputerName.Count -gt 1){
 			    }
 			    #retrieves a list of available updates
 			    write-output "Initiating PSWindowsUpdate on $ComputerName"
-                $Script = [scriptblock]::Create("Get-wulist -NotCategory $UpdateCats -NotTitle 'Feature|Preview' -MicrosoftUpdate -verbose")
+                $Script = [scriptblock]::Create("Get-wulist -NotCategory $UpdateCats -NotTitle 'Feature|Preview' -verbose")
 			    $updates = invoke-command -session $session -scriptblock $Script
 			    $UpdateNumber = ($updates | Measure-Object).Count
                 if (($UpdateNumber -eq 0) -and ($Restart)){
@@ -109,9 +109,9 @@ if ($ComputerName.Count -gt 1){
 
 				    #remote command to install windows updates, creates a scheduled task on remote computer
 				    if ($Restart){
-					    $Script = "Install-WindowsUpdate -NotCategory $UpdateCats -NotTitle 'Feature|Preview' -AcceptAll -MicrosoftUpdate -AutoReboot | "
+					    $Script = "Install-WindowsUpdate -NotCategory $UpdateCats -NotTitle 'Feature|Preview' -AcceptAll -AutoReboot | "
 				    }else{
-					    $Script = "Install-WindowsUpdate -NotCategory $UpdateCats -NotTitle 'Feature|Preview' -AcceptAll -MicrosoftUpdate -IgnoreReboot | "
+					    $Script = "Install-WindowsUpdate -NotCategory $UpdateCats -NotTitle 'Feature|Preview' -AcceptAll -IgnoreReboot | "
 				    }
                     $Script = [scriptblock]::Create($Script + ({Out-File $env:ALLUSERSPROFILE\AdminScripts\PSWindowsUpdate.log}).ToString())
 
