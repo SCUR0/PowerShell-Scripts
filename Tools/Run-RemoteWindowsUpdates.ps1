@@ -50,9 +50,6 @@ If (!($AdminRole)){
 }
 
 
-#load PSWindowsUpdate
-Load-PSWindowsUpdate
-
 if ($ComputerName.Count -gt 1){
     $ArgList = @(
         "-noexit",
