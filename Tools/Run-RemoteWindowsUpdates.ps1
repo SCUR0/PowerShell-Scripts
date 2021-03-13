@@ -173,14 +173,14 @@ if ($ComputerName.Count -gt 1){
                 
                     if (!($PingState)){
                         Write-Error "Connection lost to $ComputerName"
-                        $host.ui.RawUI.WindowTitle = "$ComputerName - Error"ù
+                        $host.ui.RawUI.WindowTitle = "$ComputerName - Error"
                         Exit
                     }
 				
 				    Write-Progress -Activity "Installing Updates" -Completed -Id 1
                     if ($TaskState.State -ne "Running" -and ($TaskInfo.LastTaskResult -eq 0 -or $TaskInfo.LastTaskResult -eq 267014 -or $TaskInfo.LastTaskResult -eq 259)){  
 				        Write-Output "Update Task Ended - $(get-date)"
-				        $host.ui.RawUI.WindowTitle = "$ComputerName - Task Completed"ù
+				        $host.ui.RawUI.WindowTitle = "$ComputerName - Task Completed"
 				        if ($Restart){
                             if ($UpdateNumber -eq 1){
                                 #Antivirus updates sometimes occur on second run and doesn't reboot afterwards
@@ -197,7 +197,7 @@ if ($ComputerName.Count -gt 1){
                         Write-Warning "Task completed with an error."
                     }
 			    }else{
-				    $host.ui.RawUI.WindowTitle = "$ComputerName - Up to Date"ù
+				    $host.ui.RawUI.WindowTitle = "$ComputerName - Up to Date"
 			    }
 		    }
         }else{
