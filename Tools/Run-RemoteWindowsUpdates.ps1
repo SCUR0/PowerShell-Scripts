@@ -64,7 +64,7 @@ if ($ComputerName.Count -gt 1){
     }
 }else{
     $host.ui.RawUI.WindowTitle = "$ComputerName"
-	if ($Drivers){
+	if (!$Drivers){
 		$UpdateCats = "'Drivers','Feature Packs'"
 	}else{
 		$UpdateCats = "'Feature Packs'"
