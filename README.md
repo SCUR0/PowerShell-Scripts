@@ -41,6 +41,10 @@ It is recommended to run this during the image process such as an MDT task seque
 
 ## Tasks
 
+### Backup-UserFiles.ps1
+
+  Script used to backup user folders to google drive.
+
 ### Backup-VMs.ps1
 
   Simple script that exports a copy of all VMs to a backup directory as well as compresses for archive with 7zip if installed.
