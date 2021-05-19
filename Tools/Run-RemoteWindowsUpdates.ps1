@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 	Install windows updates via powershell remotely
 
@@ -186,9 +186,10 @@ if ($ComputerName.Count -gt 1){
 					}
 					#create temp drive
 					New-PSDrive @DrivePara | out-null
+					$LogPath = "$($DrivePara.Name):\ProgramData\AdminScripts\PSWindowsUpdate.log"
 					do {
-						if (Test-Path "$($ComputerName)-C:\ProgramData\AdminScripts\PSWindowsUpdate.log"){
-							$UpdateLog = Get-Content "$($ComputerName)-C:\ProgramData\AdminScripts\PSWindowsUpdate.log"
+						if (Test-Path "$LogPath"){
+							$UpdateLog = Get-Content "$LogPath"
 							if (!$UpdateLog){
 								$ProgStatus = "Connecting to update servers"
 							}else{
@@ -223,7 +224,7 @@ if ($ComputerName.Count -gt 1){
 					}
 					
 					Write-Progress -Activity "Installing Updates" -Completed -Id 1
-					Remove-PSDrive "$($ComputerName)-C"
+					Remove-PSDrive "$($DrivePara.Name)"
 					
 					if ($TaskState.State -ne "Running" -and ($TaskInfo.LastTaskResult -eq 0 -or $TaskInfo.LastTaskResult -eq 267014 -or $TaskInfo.LastTaskResult -eq 259)){  
 						Write-Output "Update Task Ended - $(get-date)"
