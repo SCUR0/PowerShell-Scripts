@@ -40,6 +40,7 @@ function Load-PSWindowsUpdate {
 		if (([System.Environment]::OSVersion.Version).Major -ne 10){
 			Write-Error "Windows 10 required"
 		}else{
+			[Net.ServicePointManager]::SecurityProtocol += [Net.SecurityProtocolType]::Tls12
 			Install-PackageProvider NuGet -Force | Out-Null
 			Set-PSRepository PSGallery -InstallationPolicy Trusted | Out-Null
 			Install-Module PSWindowsUpdate -force -confirm:$false | Out-Null
