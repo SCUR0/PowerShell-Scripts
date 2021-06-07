@@ -1,16 +1,24 @@
-<#
+﻿<#
 .SYNOPSIS
-  Compacts all VHDs on all VMs
+  Compacts all VHDs
 
 .DESCRIPTION
   Script will shutdown and then compact all VHDs for VMs
   This is used for dynamic disks.
 
+.Parameter Name
+  Name of VM. If left blank the script will compact all VMs.
+
 #>
 [cmdletbinding()]
-param ()
-
-$VMs=Get-VM
+param (
+    $Name
+)
+if ($Name){
+    $VMs = Get-VM -Name $Name
+}else{
+    $VMs = Get-VM
+}
 $VMCount=$VMs.count
 $CurrentCount=0
 foreach ($VM in $VMs) {
