@@ -32,19 +32,38 @@ param (
 )
 
 function Load-PSWindowsUpdate {
+    $ModuleError = $null
+	$NuGet = Get-PackageProvider | where {$_.Name -like 'NuGet'}
+    if (!$NuGet){
+        Write-Warning "Installing NuGet Package Provider"
+        Install-PackageProvider NuGet -Force | Out-Null
+		Set-PSRepository PSGallery -InstallationPolicy Trusted | Out-Null
+    }
 	Try {
 		import-module PSWindowsUpdate -ErrorAction Stop
 	}catch{
-		Write-Warning "PSWindowsUpdate not found. Installing module"
-					
-		if (([System.Environment]::OSVersion.Version).Major -ne 10){
-			Write-Error "Windows 10 required"
-		}else{
-			Install-PackageProvider NuGet -Force | Out-Null
-			Set-PSRepository PSGallery -InstallationPolicy Trusted | Out-Null
-			Install-Module PSWindowsUpdate -force -confirm:$false | Out-Null
-		}
+        $ModuleError = $true
+		Write-Warning "PSWindowsUpdate not found. Installing module"					
+		Install-Module PSWindowsUpdate -force -confirm:$false | Out-Null
+
 	}
+    if ($ModuleError -ne $true){
+        #check for updates
+        Write-Verbose "Checking for module updates" -Verbose
+        $CurrentAWSPSModule = ((Get-Module -Name PSWindowsUpdate -ListAvailable).Version | Sort-Object -Descending | Select-Object -First 1).ToString()
+        $NewestAWSPSModule = (Find-Module -Name PSWindowsUpdate).Version.ToString()
+        if ([System.Version]$CurrentAWSPSModule -lt [System.Version]$NewestAWSPSModule){
+            Write-Verbose "Module is out of date. Attempting to update" -verbose
+            Update-Module PSWindowsUpdate -force -confirm:$false | Out-Null
+        }
+        
+    }
+}
+
+#Windows Version check
+if (([System.Environment]::OSVersion.Version).Major -ne 10){
+	Write-Error "Windows 10 required"
+    Exit
 }
 
 #Admin check
@@ -211,10 +230,9 @@ if ($ComputerName.Count -gt 1){
 								-PercentComplete ([Math]::Round($InstalledNumber/$UpdateNumber*100)) `
 								-Id 1
 						}
-						$TaskState = Get-ScheduledTask "PSWindowsUpdate" -CimSession $CimSession
-						$TaskInfo = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $CimSession
-						$PingState = Test-Connection $ComputerName -Count 2 -Quiet
-						start-sleep -Seconds 1
+						$TaskState = Get-ScheduledTask "PSWindowsUpdate" -CimSession $CimSession -ErrorAction SilentlyContinue
+						$TaskInfo = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $CimSession -ErrorAction SilentlyContinue
+						$PingState = Test-Connection $ComputerName -Quiet
 					}until ((!($PingState)) -or ($TaskState.State -ne "Running"))
 				
 					if (!($PingState)){
