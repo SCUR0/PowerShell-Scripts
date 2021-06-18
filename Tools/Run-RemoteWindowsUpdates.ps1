@@ -32,6 +32,9 @@ param (
 )
 
 function Load-PSWindowsUpdate {
+    #Force TLS Verion
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     $ModuleError = $null
 	$NuGet = Get-PackageProvider | where {$_.Name -like 'NuGet'}
     if (!$NuGet){
@@ -54,15 +57,15 @@ function Load-PSWindowsUpdate {
         $NewestAWSPSModule = (Find-Module -Name PSWindowsUpdate).Version.ToString()
         if ([System.Version]$CurrentAWSPSModule -lt [System.Version]$NewestAWSPSModule){
             Write-Verbose "Module is out of date. Attempting to update" -verbose
-            Update-Module PSWindowsUpdate -force -confirm:$false | Out-Null
+            Update-Module PSWindowsUpdate -force -confirm:$false -ErrorAction SilentlyContinue | Out-Null
         }
         
     }
 }
 
-#Windows Version check
-if (([System.Environment]::OSVersion.Version).Major -ne 10){
-	Write-Error "Windows 10 required"
+#Powershell Version check
+if (!($PSVersionTable.PSVersion -ge 5.1)){
+	Write-Error "Powershell version 5.1 or greater is required"
     Exit
 }
 
