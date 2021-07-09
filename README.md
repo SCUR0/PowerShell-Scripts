@@ -13,6 +13,10 @@ Personal collection of powershell scripts used at home and a few work scripts. T
 
 These use a config hash that needs to be modified to match local enviroment. These were designed for my work center.
 
+### Get-LAPSPass.ps1
+
+Simple GUI script that does not require any modules to lookup LAPS password. I created it to help coworkers with LAPS.
+
 ### Remove-UserHybrid.ps1
 
 Used for account closure in a hyprid office 365 enviroment. No files, accounts, or mailboxes are deleted, instead they are moved to archive locations. Archive-UserFiles.ps1 and ShareOnlineEmailAccount.ps1 are included as part of the script
