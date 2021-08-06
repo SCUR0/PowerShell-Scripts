@@ -12,15 +12,12 @@ $Script = {
 
     if ($GDrive){
         Write-Output "Closing Google Drive"
-        $GDRunning = $true
         $GDrive | Stop-Process -Force
         while (get-process | where {$_.name -eq "GoogleDriveFS"}){
             Start-Sleep -s 1
         }
-    }else{
-        $GDRunning = $false
     }
-
+    
     if (Test-Path $LogDir){
         $LargeCount = 0
         $Files = Get-ChildItem -Path $LogDir
