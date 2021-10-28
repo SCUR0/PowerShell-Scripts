@@ -68,6 +68,8 @@ It is recommended to run this during the image process such as an MDT task seque
   If you want to launch silently with the vbs script, both scripts **need to be placed in** `$env:APPDATA\AdminScripts\`. 
   
   Create a group policy to create a scheduled task to run `Get-PendingRestartSilent.vbs` throughout the day. **Run vbs script as user not system.**
+  
+  To handle situations where no user is logged in, create another scheduled task that runs as system with the same arguments. VBS script is not needed for system tasks.
 
 ### Set-NTFSCompression.ps1
   
