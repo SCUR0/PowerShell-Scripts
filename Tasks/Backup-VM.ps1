@@ -117,7 +117,7 @@ if ($7Zip -and ($CompletedVMs)){
         $Percent=[math]::Round($CurrentCount/$StepCount*100)
         Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Status "Compressing $CompletedVM" -PercentComplete $Percent -Id 1
         $FileName = "$CompletedVM-$(Get-Date -Format "yy-MM-dd")"
-        .$7ZipExe a $FileName $CompletedVM -mmt4 -bsp1 | ForEach-Object {
+        .$7ZipExe a $FileName $CompletedVM -mmt8 -bsp1 | ForEach-Object {
             if ($_ -match '\S'){
                 $String = ($_ | Out-String).Trim()
                 $CompPerc = ($String -split '%')[0]
@@ -134,7 +134,9 @@ if ($7Zip -and ($CompletedVMs)){
         $CurrentCount++
     }
 }else{
-    Write-Output "7zip can be used to compress and archive VMs. Install 7zip or use custom install path in launch arguments."
+    if (!$7zip){
+        Write-Output "7zip can be used to compress and archive VMs. Install 7zip or use custom install path in launch arguments."
+    }
 }
 
 Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Id 1 -Completed
