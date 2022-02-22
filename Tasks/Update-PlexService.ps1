@@ -41,9 +41,9 @@ if ($latestupdate){
 	Write-Host "Stopping Plex Service..." -ForegroundColor DarkYellow
 	try{
 		Get-Service $ServiceName | Foreach {
-			$_.DependentServices | stop-Service -PassThru
+			$_.DependentServices | stop-Service
 		}
-		Stop-Service $ServiceName -ErrorAction Stop -PassThru
+		Stop-Service $ServiceName -ErrorAction Stop
 	}catch{
 		Write-Error $Error
 		$PlexFail=$true
@@ -60,12 +60,15 @@ if ($latestupdate){
 		}
 		Write-Host "Starting Plex Service..." -ForegroundColor green
 		Get-Service $ServiceName | Foreach {
-			$_.DependentServices | start-Service -PassThru
+			$_.DependentServices | start-Service
 		}
-		Start-Service $ServiceName -PassThru
-		#Delete Update
-		Write-Output "Deleting leftover update files"
-		Remove-Item "$UpdateDir/*" -Recurse
+		Start-Service $ServiceName
+		#Remove old updates
+        $OldUpdates = Get-ChildItem -Path $UpdateDir -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -First 3
+        if (($OldUpdates) -and ($OldUpdates.Count -gt 3)){
+            Write-Output "Removing old update files"
+            $OldUpdates | Remove-Item -Force
+        }
 	}
 }else{
 	Write-Error "No update file found in $UpdateDir. Verify folder is correct."
