@@ -70,6 +70,10 @@ It is recommended to run this during the image process such as an MDT task seque
   Create a group policy to create a scheduled task to run `Get-PendingRestartSilent.vbs` throughout the day. **Run vbs script as user not system.**
   
   To handle situations where no user is logged in, create another scheduled task that runs as system with the same arguments. VBS script is not needed for system tasks.
+  
+### Send-UPSOutageEmail.ps1
+
+  Send SMTP email notifications for UPS devices that don't offer sending emails (Powerchute Personal Edition)
 
 ### Set-NTFSCompression.ps1
   
