@@ -7,11 +7,15 @@ Personal collection of powershell scripts used at home and a few work scripts. T
 
   A Powershell script that will adjust the reboot task permissions in update orchestrator to prevent windows from automatically rebooting. The script will perminently disable auto reboot until the next feature update. This is due to how windows wipes the windows directory during updates.
   
-  Changes have been made for 1809.
+  Changes have been made for 1809. I have not tested for newer versions and am no longer developing this script.
   
 ## Active Directory
 
 These use a config hash that needs to be modified to match local enviroment. These were designed for my work center.
+
+### Archive-UserFiles.ps1
+
+Searches multiple network locations for user files and then moves via robocopy.
 
 ### Get-LAPSPass.ps1
 
@@ -19,11 +23,11 @@ Simple GUI script that does not require any modules to lookup LAPS password. I c
 
 ### Remove-UserHybrid.ps1
 
-Used for account closure in a hyprid office 365 enviroment. No files, accounts, or mailboxes are deleted, instead they are moved to archive locations. Archive-UserFiles.ps1 and ShareOnlineEmailAccount.ps1 are included as part of the script
+Used for account closure in a hyprid office 365 enviroment. No files, accounts, or mailboxes are deleted, instead they are moved to archive locations. Archive-UserFiles.ps1 and ShareOnlineEmailAccount.ps1 are included as part of the script.
 
-### Archive-UserFiles.ps1
+### Search-GroupPolicy.ps1
 
-Searches multiple network locations for user files and then moves via robocopy.
+Simple script used to search for simple string in domain group policies.
 
 ### Share-OnlineEmailAccount.ps1
 
