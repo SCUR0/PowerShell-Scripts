@@ -4,7 +4,9 @@ param (
 )
 
 #ask user if left blank
-$Search = Read-Host "Search string"
+if (!$Search){
+    $Search = Read-Host "Search string"
+}
  
 $DomainName = $env:USERDNSDOMAIN 
  
