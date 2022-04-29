@@ -1,31 +1,31 @@
 <#
 .SYNOPSIS
-  Sets NTFS compression to directories.
+    Sets NTFS compression to directories.
 
 .PARAMETER  Path
-	Path to location that compression needs to be checked. Supports arrays.
+    Path to location that compression needs to be checked. Supports arrays.
 
 .PARAMETER  Exclude
-	File extensions to exclude from compression. Common compressed files set as default.
+    File extensions to exclude from compression. Common compressed files set as default.
 
 .PARAMETER  State
-	State of file compression you want set.
+    State of file compression you want set.
 
 .PARAMETER  Progress
-	Show progress bar. Recommended to not be shown if running as a task due to overhead. Use -Progress:$false to hide.
+    Show progress bar. Recommended to not be shown if running as a task due to overhead. Use -Progress:$false to hide.
 
 .DESCRIPTION
-  Scans folders recursively to check for ntfs compression.
-  Any files found not in the requested compression state will be changed.
+    Scans folders recursively to check for ntfs compression.
+    Any files found not in the requested compression state will be changed.
 #>
 
 [CmdletBinding()]
 param (
     [Parameter(Mandatory)]
-	$Path,
+    $Path,
     $Exclude = ('*.7z', '*.zip','*.mp4','*.mp3','*.mov','*.mkv'), 
-	[ValidateSet('compress','uncompress')]
-	[string]$State = 'compress',
+    [ValidateSet('compress','uncompress')]
+    [string]$State = 'compress',
     [switch]$Progress = $true
 )
 
@@ -36,7 +36,7 @@ if ($State -eq 'compress'){
 }
 
 foreach ($Folder in $Path) {
-	Write-Verbose "Analysing $Folder" -Verbose
+    Write-Verbose "Analysing $Folder" -Verbose
     $Parent = Get-ChildItem $Folder -Recurse -Exclude $Exclude
 
     if ($Progress){
