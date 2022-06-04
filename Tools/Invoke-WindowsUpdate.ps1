@@ -17,6 +17,9 @@
 .PARAMETER Drivers
 	Check for driver updates along with windows updates.
 
+.PARAMETER DriversOnly
+	Check for driver updates only.
+
 .PARAMETER Credential
 	Used to send alternative credentials
 #>
