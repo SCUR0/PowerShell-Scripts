@@ -19,10 +19,11 @@
 #>
 [cmdletbinding()]
 param (
-	$ServiceName="plex",
-	$User="media",
+	$ServiceName="PlexService",
 	$UpdateDir
 )
+#Determine user of service
+$User = (Get-CimInstance -Query "SELECT * from Win32_Service WHERE name = `"$ServiceName`"" | Select-Object startname).startname -replace '.\\',''
 
 if (!$UpdateDir){
 	#Default download locations
@@ -64,10 +65,10 @@ if ($latestupdate){
 		}
 		Start-Service $ServiceName
 		#Remove old updates
-        $OldUpdates = Get-ChildItem -Path $UpdateDir -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -First 3
-        if (($OldUpdates) -and ($OldUpdates.Count -gt 3)){
+        $OldUpdates = Get-ChildItem -Path $UpdateDir -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -skip 3
+        if ($OldUpdates){
             Write-Output "Removing old update files"
-            $OldUpdates | Remove-Item -Force
+            $OldUpdates | Remove-Item -Recurse -Force
         }
 	}
 }else{
