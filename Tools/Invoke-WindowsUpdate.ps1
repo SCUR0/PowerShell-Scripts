@@ -20,6 +20,9 @@
 .PARAMETER DriversOnly
 	Check for driver updates only.
 
+.PARAMETER NoFeatures
+	Feature updates are ignored. Feature updates include new builds (21H2)
+
 .PARAMETER Credential
 	Used to send alternative credentials
 #>
@@ -32,6 +35,7 @@ param (
     [switch]$WSUS,
 	[switch]$Drivers,
     [switch]$DriversOnly,
+    [switch]$NoFeatures,
 	[System.Management.Automation.PSCredential]$Credential
 )
 
@@ -163,8 +167,8 @@ if ($ComputerName.Count -gt 1){
 				write-output "Initiating PSWindowsUpdate on $Name"
                 
                 $WUPara = @{
-                    NotTitle    = 'Feature|Preview'
-                    NotCategory = 'Drivers','Feature Packs'
+                    NotTitle    = 'Preview'
+                    NotCategory = @('Drivers')
                     Verbose     = $true
                 }
 
@@ -177,11 +181,14 @@ if ($ComputerName.Count -gt 1){
 
                 #Exclusions
                 if ($Drivers -or $DriversOnly){
-		            $WUPara.NotCategory = 'Feature Packs'
+                    $WUPara.Remove('NotCategory')
                     if ($DriversOnly){
                         $WUPara.Category = 'Drivers'
                     }
 	            }
+                if ($NoFeatures){
+                    $WUPara.NotCategory += 'Feature Packs'
+                }
                 ##################          Pending Restart Script Block          ##################
                 $GetPendingRestart = {
 					If (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"){
