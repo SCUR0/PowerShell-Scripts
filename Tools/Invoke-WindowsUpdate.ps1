@@ -167,9 +167,10 @@ if ($ComputerName.Count -gt 1){
 				write-output "Initiating PSWindowsUpdate on $Name"
                 
                 $WUPara = @{
-                    NotTitle    = 'Preview'
-                    NotCategory = @('Drivers')
-                    Verbose     = $true
+                    NotTitle     = 'Preview'
+                    NotCategory  = @('Drivers')
+                    IgnoreReboot = $true
+                    Verbose      = $true
                 }
 
                 #Update Source
@@ -214,10 +215,11 @@ if ($ComputerName.Count -gt 1){
 				#if there are available updates proceed with installing
 				if ($updates){
                     $WUPara.Add('AcceptAll',$true)
+
+                    #Auto Restart
                     if ($Restart){
                         $WUPara.Add('AutoReboot',$true)
-                    }else{
-                        $WUPara.Add('IgnoreReboot',$true)
+                        $WUPara.Remove('IgnoreReboot')
                     }
 
                     #convert parameter splatter to string
