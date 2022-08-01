@@ -25,6 +25,10 @@
 
 .PARAMETER Credential
 	Used to send alternative credentials
+
+.PARAMETER NoNewWindow
+	Do not open new window for updates
+
 #>
 
 [CmdletBinding()]
@@ -36,7 +40,8 @@ param (
 	[switch]$Drivers,
     [switch]$DriversOnly,
     [switch]$NoFeatures,
-	[System.Management.Automation.PSCredential]$Credential
+	[System.Management.Automation.PSCredential]$Credential,
+    [switch]$NoNewWindow
 )
 
 function Load-PSWindowsUpdate {
@@ -46,7 +51,7 @@ function Load-PSWindowsUpdate {
     $ModuleError = $null
 	$NuGet = Get-PackageProvider | where {$_.Name -like 'NuGet'}
     if (!$NuGet){
-        Write-Warning "Installing NuGet Package Provider"
+        Write-Warning 'Installing NuGet Package Provider'
         Install-PackageProvider NuGet -Force | Out-Null
 		Set-PSRepository PSGallery -InstallationPolicy Trusted | Out-Null
     }
@@ -54,17 +59,17 @@ function Load-PSWindowsUpdate {
 		import-module PSWindowsUpdate -ErrorAction Stop
 	}catch{
         $ModuleError = $true
-		Write-Warning "PSWindowsUpdate not found. Installing module"					
+		Write-Warning 'PSWindowsUpdate not found. Installing module'					
 		Install-Module PSWindowsUpdate -force -confirm:$false | Out-Null
 
 	}
     if ($ModuleError -ne $true){
         #check for updates
-        Write-Verbose "Checking for module updates" -Verbose
+        Write-Verbose 'Checking for module updates' -Verbose
         $CurrentAWSPSModule = ((Get-Module -Name PSWindowsUpdate -ListAvailable).Version | Sort-Object -Descending | Select-Object -First 1).ToString()
         $NewestAWSPSModule = (Find-Module -Name PSWindowsUpdate).Version.ToString()
         if ([System.Version]$CurrentAWSPSModule -lt [System.Version]$NewestAWSPSModule){
-            Write-Verbose "Module is out of date. Attempting to update" -verbose
+            Write-Verbose 'Module is out of date. Attempting to update' -verbose
             Update-Module PSWindowsUpdate -force -confirm:$false -ErrorAction SilentlyContinue | Out-Null
         }
         
@@ -73,7 +78,7 @@ function Load-PSWindowsUpdate {
 
 #Powershell Version check
 if (!($PSVersionTable.PSVersion -ge 5.1)){
-	Write-Error "Powershell version 5.1 or greater is required"
+	Write-Error 'Powershell version 5.1 or greater is required'
     Exit
 }
 
@@ -81,18 +86,19 @@ if (!($PSVersionTable.PSVersion -ge 5.1)){
 $user = [Security.Principal.WindowsIdentity]::GetCurrent();
 $AdminRole = (New-Object Security.Principal.WindowsPrincipal $user).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)  
 If (!($AdminRole)){
-	Write-Error "Script requires to be run as administrator"
+	Write-Error 'Script requires to be run as administrator'
 	pause
 	exit
 }
 
-if ($ComputerName.Count -gt 1){
+if ($ComputerName -and $NoNewWindow -ne $true){
 	$ArgList = @(
-		"-noexit",
-		"-file $PSCommandPath"
+		'-NoExit',
+		"-File $PSCommandPath",
+        '-NoNewWindow'
 	)
 	if ($Restart){
-		$ArgList += "-Restart"
+		$ArgList += '-Restart'
 	}
 	foreach ($Computer in $ComputerName){
 		#launch each computer in new window for easy tracking
@@ -122,16 +128,17 @@ if ($ComputerName.Count -gt 1){
 		Try{
 			$CimSession = New-CimSession @CimPara -ErrorAction Stop
 		}Catch{
+            $host.ui.RawUI.WindowTitle = "$ComputerName - Error"
 			Write-Error $Error[0]
 			exit
 		}
 
         #Verify update task isn't still running
-		if ((Get-ScheduledTask "PSWindowsUpdate" -CimSession $CimSession -ErrorAction Ignore).State -ne "Running"){
+		if ((Get-ScheduledTask 'PSWindowsUpdate' -CimSession $CimSession -ErrorAction Ignore).State -ne 'Running'){
 			#start remote powershell session to the computer
 			$PSPara = @{ComputerName = $ComputerName}
 			if ($Credential){
-				$PSPara.Add("Credential",$Credential)
+				$PSPara.Add('Credential',$Credential)
 			}
             
             #Creates AdminScript folder if it does not exist
@@ -192,7 +199,7 @@ if ($ComputerName.Count -gt 1){
                 }
                 ##################          Pending Restart Script Block          ##################
                 $GetPendingRestart = {
-					If (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired"){
+					If (Test-Path -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'){
 						Write-Output "Pending restart flag found for $env:COMPUTERNAME. Restarting"
 						Restart-Computer -Force -ErrorAction SilentlyContinue
 					}
@@ -203,6 +210,7 @@ if ($ComputerName.Count -gt 1){
                 }else{
                     $updates = Get-WUList @WUPara
                 }
+                
 				$UpdateNumber = ($updates | Measure-Object).Count
 				if (($UpdateNumber -eq 0) -and ($Restart)){
 					if ($ComputerName){
@@ -214,6 +222,8 @@ if ($ComputerName.Count -gt 1){
 
 				#if there are available updates proceed with installing
 				if ($updates){
+                    Write-Output 'Updates found:'
+                    Write-Output $updates.title
                     $WUPara.Add('AcceptAll',$true)
 
                     #Auto Restart
@@ -233,7 +243,7 @@ if ($ComputerName.Count -gt 1){
                                 foreach ($Value in $Entry.Value){
                                     $String = $String + "'" + $Value + "'"
                                     if ($Value -ne $Entry.Value[-1] -and ($Entry.Value).Count -ne 1){
-                                        $String = $String + ","
+                                        $String = $String + ','
                                     }
                                 }
                             }
@@ -243,11 +253,11 @@ if ($ComputerName.Count -gt 1){
 					#remote command to install windows updates, creates a scheduled task on remote computer
 					$Script = [scriptblock]::Create("Install-WindowsUpdate $String | Out-File $env:ALLUSERSPROFILE\AdminScripts\PSWindowsUpdate.log")
 
-					Write-Verbose "Initiating Windows Updates" -Verbose
+					Write-Verbose 'Initiating Windows Updates' -Verbose
                     
                     if ($ComputerName){
 
-					    $OldTask = Get-ScheduledTask "PSWindowsUpdate" -CimSession $CimSession -ErrorAction SilentlyContinue
+					    $OldTask = Get-ScheduledTask 'PSWindowsUpdate' -CimSession $CimSession -ErrorAction SilentlyContinue
 					    if ($OldTask){
 						    $OldTask | Unregister-ScheduledTask -Confirm:$false
 					    }
@@ -258,18 +268,19 @@ if ($ComputerName.Count -gt 1){
 					    $Trigger = New-ScheduledTaskTrigger -Once -At $StartTime
 					    $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
 					    $Principal = New-ScheduledTaskPrincipal -UserId SYSTEM -LogonType ServiceAccount -RunLevel Highest
+                        $TaskError = $null
 
 
-					    Register-ScheduledTask -Action $Action -Trigger $Trigger -TaskName "PSWindowsUpdate" -Description "Windows Updates" `
+					    Register-ScheduledTask -Action $Action -Trigger $Trigger -TaskName 'PSWindowsUpdate' -Description 'Windows Updates' `
 						    -Settings $Settings -Principal $Principal -Force -Verbose:$false -CimSession $CimSession | Out-Null
 
 					    #Pause to let task start
 					    Start-Sleep -Seconds 5
 
 					    #check if running else force to run
-					    $TaskInfo = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $CimSession
+					    $TaskInfo = Get-ScheduledTaskInfo 'PSWindowsUpdate' -CimSession $CimSession
 					    if ($TaskInfo.LastTaskResult -eq 267011){
-						    Start-ScheduledTask "PSWindowsUpdate" -CimSession $CimSession
+						    Start-ScheduledTask 'PSWindowsUpdate' -CimSession $CimSession
 						    Start-Sleep -Seconds 5
 					    }
 
@@ -280,17 +291,17 @@ if ($ComputerName.Count -gt 1){
                         $DriveName = "WUDrive-$($ComputerName -replace '\.','')"
 
 					    #Remove PSDrive if exists (script interupted)
-                        Get-PSDrive | Where-Object {$_.Name -like  "WUDrive-*"} | Remove-PSDrive
+                        Get-PSDrive | Where-Object {$_.Name -like  'WUDrive-*'} | Remove-PSDrive
 
 					    $DrivePara = @{
 						    Name = $DriveName
-						    PSProvider = "FileSystem"
-						    ErrorAction = "Stop"
+						    PSProvider = 'FileSystem'
+						    ErrorAction = 'Stop'
 					    }
                         $DrivePara.Add('Root',"\\$ComputerName\c$")
 
 					    if ($Credential){
-						    $DrivePara.Add("Credential",$Credential)
+						    $DrivePara.Add('Credential',$Credential)
 					    }
 					    #create temp drive
 					    New-PSDrive @DrivePara | out-null
@@ -300,15 +311,15 @@ if ($ComputerName.Count -gt 1){
 						    if (Test-Path "$LogPath"){
 							    $UpdateLog = Get-Content "$LogPath"
 							    if (!$UpdateLog){
-								    $ProgStatus = "Connecting to update servers"
+								    $ProgStatus = 'Connecting to update servers'
 							    }else{
-								    [int]$DownloadNumber = ([regex]::Matches($UpdateLog, "Downloaded" )).count
+								    [int]$DownloadNumber = ([regex]::Matches($UpdateLog, 'Downloaded' )).count
 								    if ($DownloadNumber -ne $UpdateNumber){
-									    $ProgStatus = "Downloading $((($UpdateLog[($DownloadNumber + 3)]) -replace '\s+', ' ').split(" ",6)[5] -join ' ')"
+									    $ProgStatus = "Downloading $((($UpdateLog[($DownloadNumber + 3)]) -replace '\s+', ' ').split(' ',6)[5] -join ' ')"
 								    }else{
-									    $ProgStatus = (($UpdateLog[($InstalledNumber + 3)]) -replace '\s+', ' ').split(" ",6)[3,5] -join ' '
+									    $ProgStatus = (($UpdateLog[($InstalledNumber + 3)]) -replace '\s+', ' ').split(' ',6)[3,5] -join ' '
 								    }
-								    [int]$InstalledNumber = ([regex]::Matches($UpdateLog, "Installed|Failed" )).count
+								    [int]$InstalledNumber = ([regex]::Matches($UpdateLog, 'Installed|Failed' )).count
 							    }
 							    if ($InstalledNumber -lt $UpdateNumber){
 								    $DisplayNumber = $InstalledNumber + 1
@@ -320,10 +331,10 @@ if ($ComputerName.Count -gt 1){
 								    -PercentComplete ([Math]::Round($InstalledNumber/$UpdateNumber*100)) `
 								    -Id 1
 						    }
-						    $TaskState = Get-ScheduledTask "PSWindowsUpdate" -CimSession $CimSession -ErrorAction SilentlyContinue
-						    $TaskInfo = Get-ScheduledTaskInfo "PSWindowsUpdate" -CimSession $CimSession -ErrorAction SilentlyContinue
+						    $TaskState = Get-ScheduledTask 'PSWindowsUpdate' -CimSession $CimSession -ErrorAction SilentlyContinue
+						    $TaskInfo = Get-ScheduledTaskInfo 'PSWindowsUpdate' -CimSession $CimSession -ErrorAction SilentlyContinue
 						    $PingState = Test-Connection $ComputerName -Quiet
-					    }until ((!($PingState)) -or ($TaskState.State -ne "Running"))
+					    }until ((!($PingState)) -or ($TaskState.State -ne 'Running'))
 
                         $ErrorActionPreference = 'Continue'
 				
@@ -333,15 +344,16 @@ if ($ComputerName.Count -gt 1){
 						    Exit
 					    }
 					
-					    Write-Progress -Activity "Installing Updates" -Completed -Id 1
+					    Write-Progress -Activity 'Installing Updates' -Completed -Id 1
 					    Remove-PSDrive "$($DrivePara.Name)"
 					
-					    if ($TaskState.State -ne "Running" -and ($TaskInfo.LastTaskResult -eq 0 -or $TaskInfo.LastTaskResult -eq 267014 -or $TaskInfo.LastTaskResult -eq 259)){  
+					    if ($TaskState.State -ne 'Running' -and ($TaskInfo.LastTaskResult -eq 0 -or $TaskInfo.LastTaskResult -eq 267014 -or $TaskInfo.LastTaskResult -eq 259)){  
 						    Write-Output "Update Task Ended - $(get-date)"
 						    $host.ui.RawUI.WindowTitle = "$ComputerName - Task Completed"
 					    }else{
 						    $host.ui.RawUI.WindowTitle = "$ComputerName - Error"
-						    Write-Warning "Task completed with an error."
+                            $TaskError = $true
+						    Write-Warning 'Task completed with an error.'
 					    }
                     }else{
                         Invoke-Command -ScriptBlock $Script
@@ -351,8 +363,10 @@ if ($ComputerName.Count -gt 1){
 						if ($UpdateNumber -eq 1){
 							#Antivirus updates sometimes occur on second run and doesn't reboot afterwards
 							Invoke-Command -session $session -ScriptBlock $GetPendingRestart
-						}					
-						Write-Output "If updates required restart, the computer will restart shortly"				 
+						}
+                        if (!$TaskError){					
+						    Write-Output 'If updates required restart, the computer will restart shortly'
+                        }
 					}
 
 				}else{
