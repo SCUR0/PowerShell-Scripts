@@ -91,7 +91,8 @@ If (!($AdminRole)){
 	exit
 }
 
-if ($ComputerName -and $NoNewWindow -ne $true){
+#Credentials can't be passed in start-process and thus are forced to run in current window
+if (($ComputerName) -and ($NoNewWindow -ne $true) -and (!$Credential)){
 	$ArgList = @(
 		'-NoExit',
 		"-File $PSCommandPath",
@@ -100,6 +101,19 @@ if ($ComputerName -and $NoNewWindow -ne $true){
 	if ($Restart){
 		$ArgList += '-Restart'
 	}
+    if ($WSUS){
+		$ArgList += "-WSUS"
+	}
+    if ($Drivers){
+		$ArgList += "-Drivers"
+	}
+    if ($DriversOnly){
+		$ArgList += "-DriversOnly"
+	}
+    if ($NoFeatures){
+		$ArgList += "-NoFeatures"
+	}
+
 	foreach ($Computer in $ComputerName){
 		#launch each computer in new window for easy tracking
 		start-process powershell -ArgumentList ($ArgList + "-ComputerName $Computer")		
@@ -362,7 +376,11 @@ if ($ComputerName -and $NoNewWindow -ne $true){
                     if ($Restart){
 						if ($UpdateNumber -eq 1){
 							#Antivirus updates sometimes occur on second run and doesn't reboot afterwards
-							Invoke-Command -session $session -ScriptBlock $GetPendingRestart
+							if ($ComputerName){
+                                Invoke-Command -session $session -ScriptBlock $GetPendingRestart
+                            }else{
+                                Invoke-Command -ScriptBlock $GetPendingRestart
+                            }
 						}
                         if (!$TaskError){					
 						    Write-Output 'If updates required restart, the computer will restart shortly'
