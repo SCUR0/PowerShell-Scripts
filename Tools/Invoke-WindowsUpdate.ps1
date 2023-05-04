@@ -159,8 +159,6 @@ if (($ComputerName) -and ($NoNewWindow -ne $true) -and (!$Credential)){
             $LogSetup = {
                 if (!(Test-Path $env:ALLUSERSPROFILE\AdminScripts)){
 					New-Item $env:ALLUSERSPROFILE\AdminScripts -ItemType Directory | Out-Null
-				}else{
-					Remove-Item $env:ALLUSERSPROFILE\AdminScripts\PSWindowsUpdate.log -ErrorAction SilentlyContinue
 				}
             }
             
