@@ -15,7 +15,7 @@
 .PARAMETER Exclude
   List of VMs to not include in export if Name parameter is left default (all VMs).
 
-.PARAMETER 7ZipExe
+.PARAMETER ZipExe
   Path for 7Zip. If left empty uses the default path for 7zip executable.
   If 7zip is not found the script will export to folders uncompressed.
 
@@ -26,9 +26,9 @@
 [cmdletbinding()]
 param (
     $Name,
-    $ExportPath="D:\Backup\VMs",
+    $ExportPath,
     $Exclude,
-    $7ZipExe="C:\Program Files\7-Zip\7z.exe"
+    $ZipExe="C:\Program Files\7-Zip\7z.exe"
     
 )
 
@@ -43,11 +43,11 @@ if ($VMs.Count -eq 0){
 
 ###Variables###
 #check if 7zip is installed
-if (Test-Path $7ZipExe){
-    $7Zip = $true
+if (Test-Path $ZipExe){
+    $Zip = $true
     $StepCount=$VMs.count * 2
 }else{
-    $7Zip = $false
+    $Zip = $false
     $StepCount=$VMs.count
 }
 $CurrentCount=0
@@ -92,7 +92,6 @@ foreach ($VM in $VMs) {
                 Rename-Item -Path $TempPath -NewName "$ExportPath\$($VM.Name)"
             }
             $ExportFail = $true
-            $CurrentCount++
         }
         if (!$ExportFail){
             Write-Verbose "Export successful"
@@ -108,7 +107,7 @@ foreach ($VM in $VMs) {
 Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Completed
 
 #Compress if 7zip is installed
-if ($7Zip -and ($CompletedVMs)){
+if ($Zip -and ($CompletedVMs)){
     Write-Verbose "Compressing Exports"
     cd $ExportPath
 
@@ -117,7 +116,7 @@ if ($7Zip -and ($CompletedVMs)){
         $Percent=[math]::Round($CurrentCount/$StepCount*100)
         Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Status "Compressing $CompletedVM" -PercentComplete $Percent -Id 1
         $FileName = "$CompletedVM-$(Get-Date -Format "yy-MM-dd")"
-        .$7ZipExe a $FileName $CompletedVM -mmt8 -bsp1 | ForEach-Object {
+        .$ZipExe a $FileName $CompletedVM -bsp1 | ForEach-Object {
             if ($_ -match '\S'){
                 $String = ($_ | Out-String).Trim()
                 $CompPerc = ($String -split '%')[0]
@@ -134,7 +133,7 @@ if ($7Zip -and ($CompletedVMs)){
         $CurrentCount++
     }
 }else{
-    if (!$7zip){
+    if (!$Zip){
         Write-Output "7zip can be used to compress and archive VMs. Install 7zip or use custom install path in launch arguments."
     }
 }
