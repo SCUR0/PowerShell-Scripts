@@ -7,10 +7,10 @@
   This is usefull for simple backups of VMs.
 
 .PARAMETER Name
-  VM Name(s) to backup. If left empty all VMs will be backed up
+  VM Name(s) to backup. If left empty all VMs will be backed up.
 
 .PARAMETER ExportPath
-  If left empty will use D:\Backup\VMs, set to your folder for vm backup or edit default in script.
+  Path for exports. If empty will export to current path.
 
 .PARAMETER Exclude
   List of VMs to not include in export if Name parameter is left default (all VMs).
@@ -53,6 +53,10 @@ if (Test-Path $ZipExe){
 $CurrentCount=0
 $CompletedVMs = @()
 $ExportFail = $null
+#use current path if export is empty
+if (!$ExportPath){
+    $ExportPath = $PWD.Path
+}
 
 
 foreach ($VM in $VMs) {
