@@ -21,9 +21,8 @@
 
 [CmdletBinding()]
 param (
-    [Parameter(Mandatory)]
     $Path,
-    $Exclude = ('*.7z', '*.zip','*.mp4','*.mp3','*.mov','*.mkv'), 
+    $Exclude = ('*.7z', '*.zip','*.mp4','*.mp3','*.mov','*.mkv','*.vbk','*.vib','*.jpg','*.jpeg'),
     [ValidateSet('compress','uncompress')]
     [string]$State = 'compress',
     [switch]$Progress = $true
@@ -58,11 +57,13 @@ foreach ($Folder in $Path) {
             Write-Progress -Activity "$StateString Data" -Status "$i/$Total $($Child.Directory.FullName)"  -PercentComplete ($i / $Total * 100)
         }
         $i++
-        if ($State -eq 'compress' -and $Child.Attributes -notlike '*Compressed*'){
-            compact /C $Child.FullName /q > $null
-        }elseif($State -eq 'uncompress' -and $Child.Attributes -like '*Compressed*'){
-            compact /U $Child.FullName /q > $null
-        }
+		if ($Child.Attributes -notlike '*Directory*'){
+			if ($State -eq 'compress' -and $Child.Attributes -notlike '*Compressed*'){
+				compact /C $Child.FullName /q > $null
+			}elseif($State -eq 'uncompress' -and $Child.Attributes -like '*Compressed*'){
+				compact /U $Child.FullName /q > $null
+			}
+		}
     }
     if ($Progress){
         Write-Progress -Activity "$StateString Data" -Completed
