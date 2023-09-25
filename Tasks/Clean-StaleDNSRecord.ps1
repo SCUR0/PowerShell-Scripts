@@ -36,7 +36,7 @@ if ($DNSServer){
 }
 
 Write-Verbose 'Checking DNS records' -Verbose
-$DNSRecords = Get-DnsServerResourceRecord @DNSArgs | Where-Object {$_.RecordData.IPv4Address -like $Subnet -and ($_.Timestamp) <#-and $_.Hostname -notlike "*.$Domain"#>} |`
+$DNSRecords = Get-DnsServerResourceRecord @DNSArgs | Where-Object {$_.RecordData.IPv4Address -like $Subnet -and ($_.Timestamp) -and $_.Hostname -notlike "*.$Domain"} |`
                   Select-Object Hostname,Timestamp,@{N="IPv4Address";E={$_.RecordData.IPv4Address}}
 if (!$?){
     exit
