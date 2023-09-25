@@ -61,6 +61,10 @@ It is recommended to run this during the image process such as an MDT task seque
 
   Filehistory on windows 8-10 is known for randomly failing to run. I enjoy the feature of FileHistory tracking of files so I created a script that will email you if it has not ran in the specified time range.
 
+### Clear-StaleDNSRecord.ps1
+  
+  This script was made to help combat always-on-vpn's behavior to recycle dhcp leases for other clients. Also removes unresponsive clients in dns.
+
 ### Clear-StuckPrintQueue.ps1
   
   Checks for stuck print jobs on print server. It will first attempt to remove the errored job gracefully. If that fails it will stop the print service and remove job from files.
