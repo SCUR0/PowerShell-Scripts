@@ -3,7 +3,7 @@
     Cleans duplicate DNS records
 
 .DESCRIPTION
-	Searches DNS records for duplicates on the specified subnet. Useful for VPN records that aren't scrubbed
+	Searches DNS records for duplicates on the specified subnet. Also removes unresponsive clients from DNS. Useful for VPN records that aren't scrubbed
 
 .PARAMETER DNSSErver
 	DNS server hostname if running script remotely
