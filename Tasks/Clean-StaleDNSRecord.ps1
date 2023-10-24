@@ -17,6 +17,9 @@
 .PARAMETER NoPing
 	By default script will also ping clients to check connectivity. If ICMP is blocked or clients aren't configured to reply, use -NoPing to skip.
 
+.PARAMETER Jobs
+	How many jobs are run for pings. Default is 10.
+
 .EXAMPLE
 	.\Clean-StaleDNSRecord.ps1 -domain "example.com" -subnet "10.20.*"
 #>
@@ -28,8 +31,14 @@ param (
 	[string]$Domain,
 	[Parameter(Mandatory=$True)]
 	[string]$Subnet,
-	[switch]$NoPing
+	[switch]$NoPing,
+	[int]$Jobs = 10
 )
+
+#functions
+function JobsRunningCount {
+	return (Get-Job -Name DNSCleanup -ErrorAction SilentlyContinue | where {$_.State -eq 'Running'}).Count
+}
 
 $DNSArgs = @{
 	ZoneName = $Domain
@@ -61,7 +70,6 @@ Foreach ($Record in $DNSRecords){
 	$LastIP = $Record.IPv4Address
 }
 
-#ping scriptblock for job
 $PingScript = {
 	param(
 		[string]$IP,
@@ -69,29 +77,44 @@ $PingScript = {
 		$DNSArgs
 	)
 
-	if (!(Test-Connection $IP -Quiet)){
+	if (!(Test-Connection $IP -Quiet -Count 3)){
 		Remove-DnsServerResourceRecord @DNSArgs -Name $Hostname -RecordData $IP -Force -Verbose
 	}
 }
 
+
+#check for orphaned jobs
+Get-Job -Name DNSCleanup -ErrorAction SilentlyContinue | Remove-Job
+
 if (!$NoPing){
-	#check for orphaned jobs
-	Get-Job -Name DNSCleanup -ErrorAction SilentlyContinue | Remove-Job
-	
-	#test client connectivity
 	Write-Verbose 'Checking connectivity of addresses in DNS' -Verbose
+	$i = 0
+	$TotalRecords = $DNSRecords.count
 	foreach($Record in $DNSRecords){
-		Start-Job -Name DNSCleanup -ScriptBlock $PingScript -ArgumentList $Record.IPv4Address,$Record.Hostname,$DNSArgs > $null
+		if (($TotalRecords -lt 100) -or ($i % $Increments -eq 0)){
+			#Progress bar
+			Write-Progress -Activity 'Checking Connectivity' -Status "$i of $TotalRecords"  -PercentComplete ($i / $TotalRecords * 100)
+		}
+		if ((JobsRunningCount) -le $Jobs){
+			Start-Job -Name DNSCleanup -ScriptBlock $PingScript -ArgumentList $Record.IPv4Address,$Record.Hostname,$DNSArgs > $null
+		}else{
+			#loop until next opening
+			while ((JobsRunningCount) -ge $Jobs){
+				Start-Sleep -Seconds 1
+			}
+			Start-Job -Name DNSCleanup -ScriptBlock $PingScript -ArgumentList $Record.IPv4Address,$Record.Hostname,$DNSArgs > $null
+		}
+		$i++
 	}
-	
-	#show status of jobs
-	$JobsRunning = (Get-Job -Name DNSCleanup | where {$_.State -eq 'Running'}).Count
-	while ($JobsRunning -gt 0){
-		Write-Host "`rChecking " -NoNewline
-		Write-Host "$JobsRunning " -ForegroundColor Yellow -NoNewline
-		Write-Host 'records...' -NoNewline
+	Write-Progress -Activity 'Pinging IPs' -Completed
+
+	#loop waiting for jobs to finish
+	while ((JobsRunningCount) -gt 0){
+		$JobsRunningPrint = JobsRunningCount
+		Write-Host "`rWaiting for " -NoNewline
+		Write-Host "$JobsRunningPrint " -ForegroundColor Yellow -NoNewline
+		Write-Host "jobs to complete..." -NoNewline
 		Start-Sleep -Seconds 1
-		$JobsRunning = (Get-Job -Name DNSCleanup | where {$_.State -eq 'Running'}).Count
 	}
 	Write-Host
 
