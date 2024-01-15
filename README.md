@@ -83,9 +83,21 @@ It is recommended to run this during the image process such as an MDT task seque
   
   To handle situations where no user is logged in, create another scheduled task that runs as system with the same arguments. VBS script is not needed for system tasks.
   
+### Scrub-Snapraid.ps1
+
+  Perform sync and then a scrub. Notify for errors.
+
+### Send-Gmail.ps1
+
+  Simple script to send smpt email via gmail.
+
 ### Send-UPSOutageEmail.ps1
 
   Send SMTP email notifications for UPS devices that don't offer sending emails (Powerchute Personal Edition)
+  
+### Sync-Snapraid.ps1
+
+  Check for differences before syncing. If differences are found, sync and notify for errors.
 
 ### Set-NTFSCompression.ps1
   
