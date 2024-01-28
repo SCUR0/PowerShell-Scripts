@@ -43,8 +43,8 @@ if ($SyncSNAPRaid){
 }
 
 if ($rxpcc){
-    #PrimoCache freeze cache
-    &$rxpcc freeze -a -s
+    #PrimoCache pause cache
+    &$rxpcc pause -a -s
 }
 
 if ($Percent){
