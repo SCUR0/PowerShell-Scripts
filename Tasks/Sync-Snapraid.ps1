@@ -11,6 +11,9 @@
 .PARAMETER SendGmail
   Path of Send-Gmail.ps1 script #Check Tools\Send-Gmail.ps1
 
+.PARAMETER NoFilter
+  Skips filter that hides percentage spam from logs. Useful if you want to supervise the sync.
+
 .PARAMETER Force
   Skips diff check
 
@@ -23,6 +26,7 @@ param(
     [string]$LogPath   = "C:\Logs\SnapRaid\$(get-date -Format 'yy-M-dd')-SnapRaid-SYNC.txt",
     [string]$Snapexe   = 'C:\Program Files\snapraid\snapraid.exe',
     [string]$SendGmail,
+    [switch]$NoFilter,
     [switch]$Force
 )
 
@@ -53,11 +57,13 @@ if ($DiffOutput -like '*No differences' -and (!$Force)){
     $DiffOutput | out-file $LogPath -Append
 }
 
-.$Snapexe touch
-$SOutput = .$Snapexe sync --error-limit 1
+&$Snapexe touch
+if ($NoFilter){
+    &$Snapexe sync --error-limit 1 | Tee-Object $LogPath -Append
+}else{
+    &$Snapexe sync --error-limit 1 | select-string -Pattern '\d+%,\s\d+\sMB' -notmatch | out-file $LogPath -Append
+}
 $SRan = $?
-Write-Output $SOutput
-$SOutput | select-string -Pattern '\d+%,\s\d+\sMB' -notmatch | out-file $LogPath -Append
 if (!$SRan -and $SendGmail){
-    .$SendGmail -Subject "SnapRAID SYNC FAILURE on $($env:COMPUTERNAME)" -Message "<pre>$SOutput</pre>" -Html
+    .$SendGmail -Subject "SnapRAID SYNC FAILURE on $($env:COMPUTERNAME)" -Message "<pre>$($Error[0].Exception.Message)</pre>" -Html
 }
