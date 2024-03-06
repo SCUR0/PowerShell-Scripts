@@ -34,12 +34,12 @@ param(
 '#'*40+' '+(Get-Date)+' '+'#'*40 | out-file $LogPath -Append
 
 #verify snapraid isn't already running
-$SnapProcess = Get-Process snapraid -ErrorAction SilentlyContinue
+$SnapProcess = Get-Process | Where-Object {$_.Name -eq 'snapraid'}
 if ($SnapProcess){
     $Output = 'Snapraid is already running. Exiting'
-    Write-Output $Output 
+    Write-Error $Output 
     $Output | out-file $LogPath -Append
-    exit
+    exit 4
 }
 
 #check for differences

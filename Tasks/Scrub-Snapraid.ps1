@@ -49,7 +49,14 @@ if ($SyncSNAPRaid){
     }
 
     #run sync script
-    &$SyncSNAPRaid -Force @SyncArgs
+    try {
+        &$SyncSNAPRaid -Force @SyncArgs -ErrorAction Stop
+    }catch{
+        if ($SendGmail){
+            &$SendGmail -Subject "SnapRAID SCRUB FAILURE on $($env:COMPUTERNAME)" -Message "<pre>$($Error[0].Exception.Message)</pre>" -Html
+        }
+        exit 4
+    }
 }
 
 if ($rxpcc){
@@ -67,7 +74,7 @@ if ($Percent){
 if ($NoFilter){
     &$Snapexe @ScrubArgs | Tee-Object $LogPath -Append
 }else{
-    &$Snapexe @ScrubArgs | select-string -Pattern '\d+%,\s\d+\sMB' -notmatch | Out-File $LogPath -Append
+    &$Snapexe @ScrubArgs | select-string -Pattern '\d+%,\s\d+\sMB' -notmatch | Out-File $LogPath -Append 
 }
 $SRan = $?
 
