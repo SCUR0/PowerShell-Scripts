@@ -128,6 +128,10 @@ This script is used to automatically compact all of your dynamic virtual disks o
 ### Enter-RDPShadow.ps1
   
   Find console session and RDP shadow another user.
+  
+### Restore-FreeFileSyncVersions.ps1
+  
+  Remove file revision date stamps from restored FreeFileSync versions
 
 ### Get-CPUProcessLoad.ps1
 
