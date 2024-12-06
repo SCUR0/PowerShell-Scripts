@@ -59,7 +59,7 @@ if (Test-Path $ZipExe){
 $CurrentCount=0
 $CompletedVMs = @()
 $ExportFail = $null
-$PTitle= "Backing up VM(s): ($($VMs.count))"
+$PTitle= "Backing up VM(s): $($VMs.count)"
 
 
 foreach ($VM in $VMs) {
