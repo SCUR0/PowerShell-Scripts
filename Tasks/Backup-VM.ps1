@@ -28,8 +28,8 @@ param (
     $Name,
     $ExportPath,
     $Exclude,
-    $ZipExe="C:\Program Files\7-Zip\7z.exe"
-    
+    $ZipExe="C:\Program Files\7-Zip\7z.exe",
+    $Password 
 )
 
 if ($Name){
@@ -39,6 +39,12 @@ if ($Name){
 }
 if ($VMs.Count -eq 0){
     Write-Warning "No VMs found"
+}
+
+if ($Password){
+    $EncryptArgs = "-p`"$Password`" -mhe"
+}else{
+    $EncryptArgs = $null
 }
 
 ###Variables###
@@ -53,10 +59,7 @@ if (Test-Path $ZipExe){
 $CurrentCount=0
 $CompletedVMs = @()
 $ExportFail = $null
-#use current path if export is empty
-if (!$ExportPath){
-    $ExportPath = $PWD.Path
-}
+$PTitle= "Backing up VM(s): ($($VMs.count))"
 
 
 foreach ($VM in $VMs) {
@@ -64,7 +67,7 @@ foreach ($VM in $VMs) {
     $MoveFail=$null
     $RemoveFail=$null
     $Percent=[math]::Round($CurrentCount/$StepCount*100)
-    Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Status "Exporting $($VM.Name)" -PercentComplete $Percent -Id 1
+    Write-Progress -Activity $PTitle -Status "Exporting $($VM.Name)" -PercentComplete $Percent -Id 1
     if (Test-Path -Path $ExportPath\$($VM.Name)) {
         Write-Verbose "Previous backup found, moving temp."
         if (!(Test-Path $TempPath)){
@@ -118,9 +121,9 @@ if ($Zip -and ($CompletedVMs)){
     foreach ($CompletedVM in $CompletedVMs){
         Write-Verbose "Compressing $CompletedVM"
         $Percent=[math]::Round($CurrentCount/$StepCount*100)
-        Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Status "Compressing $CompletedVM" -PercentComplete $Percent -Id 1
+        Write-Progress -Activity $PTitle -Status "Compressing $CompletedVM" -PercentComplete $Percent -Id 1
         $FileName = "$CompletedVM-$(Get-Date -Format "yy-MM-dd")"
-        .$ZipExe a $FileName $CompletedVM -bsp1 | ForEach-Object {
+        Start-Process -FilePath $ZipExe -ArgumentList "a $FileName $CompletedVM $EncryptArgs -bsp1" -NoNewWindow -PassThru | ForEach-Object {
             if ($_ -match '\S'){
                 $String = ($_ | Out-String).Trim()
                 $CompPerc = ($String -split '%')[0]
@@ -142,4 +145,4 @@ if ($Zip -and ($CompletedVMs)){
     }
 }
 
-Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Id 1 -Completed
+Write-Progress -Activity $PTitle -Id 1 -Completed
