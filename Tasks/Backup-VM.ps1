@@ -19,6 +19,9 @@
   Path for 7Zip. If left empty uses the default path for 7zip executable.
   If 7zip is not found the script will export to folders uncompressed.
 
+.PARAMETER Password
+  7zip Encryption password
+
 .EXAMPLE
   Backup-VM.ps1 -ExportPath "J:\Backup\VMs" -Exclude "test-vm-1","test-vm-2"
 #>
@@ -29,7 +32,7 @@ param (
     $ExportPath,
     $Exclude,
     $ZipExe="C:\Program Files\7-Zip\7z.exe",
-    $Password 
+    $Password
 )
 
 if ($Name){
@@ -111,11 +114,13 @@ foreach ($VM in $VMs) {
     $CurrentCount++
 }
 
-Write-Progress -Activity "Backing up VM(s) ($($VMs.count))" -Completed
-
 #Compress if 7zip is installed
 if ($Zip -and ($CompletedVMs)){
     Write-Verbose "Compressing Exports"
+    
+    #use half of available threads
+    $MMT = ((Get-CimInstance Win32_Processor).NumberOfLogicalProcessors | Measure-Object -Sum).Sum / 2
+
     cd $ExportPath
 
     foreach ($CompletedVM in $CompletedVMs){
@@ -123,22 +128,15 @@ if ($Zip -and ($CompletedVMs)){
         $Percent=[math]::Round($CurrentCount/$StepCount*100)
         Write-Progress -Activity $PTitle -Status "Compressing $CompletedVM" -PercentComplete $Percent -Id 1
         $FileName = "$CompletedVM-$(Get-Date -Format "yy-MM-dd")"
-        Start-Process -FilePath $ZipExe -ArgumentList "a $FileName $CompletedVM $EncryptArgs -bsp1" -NoNewWindow -PassThru | ForEach-Object {
-            if ($_ -match '\S'){
-                $String = ($_ | Out-String).Trim()
-                $CompPerc = ($String -split '%')[0]
-                if ($CompPerc -match '^[0-9]+$'){
-                    Write-Progress -Activity "Compressing" -Status "$CompPerc% Completed" -PercentComplete $CompPerc -Id 2
-                }
-            }
-        }
-        Write-Progress -Activity "Compressing" -Id 2 -Completed
+        Start-Process -FilePath $ZipExe -ArgumentList "a $FileName $CompletedVM $EncryptArgs -mmt=$MMT -bsp1" -NoNewWindow -Wait
+        
         if (Test-Path "$FileName.7z"){
             Write-Verbose "Deleting uncompressed files"
             remove-item -Recurse -Force $CompletedVM
         }
         $CurrentCount++
     }
+    Write-Progress -Activity "Compressing" -Id 2 -Completed
 }else{
     if (!$Zip){
         Write-Output "7zip can be used to compress and archive VMs. Install 7zip or use custom install path in launch arguments."
