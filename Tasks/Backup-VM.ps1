@@ -22,6 +22,10 @@
 .PARAMETER Password
   7zip Encryption password
 
+.PARAMETER FirstDiskOnly
+  If set only the first disk of the VM will be exported. Other disks will be removed before export and added back after.
+  The VM will be shutdown if running and started again after export.
+
 .EXAMPLE
   Backup-VM.ps1 -ExportPath "J:\Backup\VMs" -Exclude "test-vm-1","test-vm-2"
 #>
@@ -29,16 +33,18 @@
 [cmdletbinding()]
 param (
     $Name,
+    [Parameter(Mandatory=$true)]
     $ExportPath,
     $Exclude,
     $ZipExe="C:\Program Files\7-Zip\7z.exe",
-    $Password
+    $Password,
+    [switch]$FirstDiskOnly
 )
 
 if ($Name){
-    $VMs = Get-VM | Where-Object {$Name -contains $_.Name}
+    $VMs = Get-VM | Where-Object {$Name -contains $_.Name -and $_.ReplicationMode -ne 'Replica'}
 }else{
-    $VMs = Get-VM | Where-Object {$Exclude -notcontains $_.Name}
+    $VMs = Get-VM | Where-Object {$Exclude -notcontains $_.Name -and $_.ReplicationMode -ne 'Replica'}
 }
 if ($VMs.Count -eq 0){
     Write-Warning "No VMs found"
@@ -64,12 +70,22 @@ $CompletedVMs = @()
 $ExportFail = $null
 $PTitle= "Backing up VM(s): $($VMs.count)"
 
+#verify export path
+if (!(Test-Path -Path $ExportPath)){
+    Write-Error "Export path does unrechable. Please verify the path."
+}
 
-foreach ($VM in $VMs) {
+
+:VMLoop foreach ($VM in $VMs) {
     $TempPath="$ExportPath\$($VM.Name).temp"
-    $MoveFail=$null
-    $RemoveFail=$null
+    Remove-Variable -Name MoveFail,ExtraDisks,VMOn -ErrorAction SilentlyContinue
     $Percent=[math]::Round($CurrentCount/$StepCount*100)
+
+    if ($FirstDiskOnly){
+        $ExtraDisks = $VM | Get-VMHardDiskDrive | Where-Object {!($_.ControllerLocation -eq 0 -and $_.ControllerNumber -eq 0)} | `
+            Select-Object VMName,Name,ControllerNumber,ControllerLocation,ControllerType,DiskNumber,Path
+    }
+
     Write-Progress -Activity $PTitle -Status "Exporting $($VM.Name)" -PercentComplete $Percent -Id 1
     if (Test-Path -Path $ExportPath\$($VM.Name)) {
         Write-Verbose "Previous backup found, moving temp."
@@ -90,7 +106,29 @@ foreach ($VM in $VMs) {
         }
     }
     if (!$MoveFail){
-        write-verbose "Exporting VM: $($VM.Name)."
+        write-verbose "Exporting VM: $($VM.Name)." -Verbose
+        if ($FirstDiskOnly -and $ExtraDisks){
+            #shutdown VM and remove extra disks
+            Try {
+                if ($VM.State -eq "Running") {
+                    $VMOn = $true
+                    Write-Verbose "Stopping VM: $($VM.Name)"
+                    Stop-VM $VM -ErrorAction Stop
+                }
+            }catch{
+                Write-Warning "Failed to stop VM $($VM.Name). Skipping"
+                continue
+            }
+            foreach ($Disk in $ExtraDisks) {
+                Write-Verbose "Removing extra disk: $($Disk.Name)"
+                try{
+                    Remove-VMHardDiskDrive -VMName $Disk.VMName -ControllerT $Disk.ControllerType -ControllerN $Disk.ControllerNumber -ControllerL $Disk.ControllerLocation -ErrorAction Stop
+                }catch{
+                    Write-Warning "Failed to remove disk $($Disk.Name) from VM $($VM.Name). Skipping export."
+                    continue VMLoop
+                }
+            }
+        }
         try{
             Export-VM -Name $VM.Name -Path $ExportPath -ErrorAction Stop
         }catch{
@@ -103,11 +141,37 @@ foreach ($VM in $VMs) {
             }
             $ExportFail = $true
         }
+        if ($FirstDiskOnly -and $ExtraDisks){
+            #Add disks if removed
+            Write-Verbose "Adding extra disks back to VM: $($VM.Name)"
+            foreach ($Disk in $ExtraDisks) {
+                try{
+                    Add-VMHardDiskDrive -VMName $Disk.VMName -Path $Disk.Path
+                }catch{
+                    Write-Warning "Failed to add disk $($Disk.Name) back to VM $($VM.Name)."
+                    continue VMLoop
+                }
+            }
+        }  
+
         if (!$ExportFail){
             Write-Verbose "Export successful"
             if (Test-Path $TempPath){
                 Remove-Item -Path $TempPath -Force -Recurse -Confirm:$false 
             }
+            
+            if ($FirstDiskOnly -and $ExtraDisks){
+                #start VM if stopped
+                if ($VMOn) {
+                    Write-Verbose "Starting VM: $($VM.Name)"
+                    try{
+                        Start-VM -Name $VM.Name -ErrorAction Stop
+                    }catch{
+                        Write-Warning "Failed to start VM $($VM.Name) after export."
+                    }
+                }
+            }
+
             $CompletedVMs += $VM.Name
         }
     }
@@ -121,7 +185,7 @@ if ($Zip -and ($CompletedVMs)){
     #use half of available threads
     $MMT = ((Get-CimInstance Win32_Processor).NumberOfLogicalProcessors | Measure-Object -Sum).Sum / 2
 
-    cd $ExportPath
+    Set-Location $ExportPath
 
     foreach ($CompletedVM in $CompletedVMs){
         Write-Verbose "Compressing $CompletedVM"
