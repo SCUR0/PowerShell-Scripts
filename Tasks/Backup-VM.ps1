@@ -26,6 +26,12 @@
   If set only the first disk of the VM will be exported. Other disks will be removed before export and added back after.
   The VM will be shutdown if running and started again after export.
 
+.PARAMETER ProcessCap
+  Used to limit the number of concurrent 7zip processes. Default is 2.
+
+.PARAMETER 7zThreads
+  Number of threads to use for 7zip compression. Default is 4 for a conservative value. 8-16 is recommended if you have high multi thread support.
+
 .EXAMPLE
   Backup-VM.ps1 -ExportPath "J:\Backup\VMs" -Exclude "test-vm-1","test-vm-2"
 #>
@@ -36,8 +42,10 @@ param (
     [Parameter(Mandatory=$true)]
     $ExportPath,
     $Exclude,
-    $ZipExe="C:\Program Files\7-Zip\7z.exe",
+    $ZipExe     = "C:\Program Files\7-Zip\7z.exe",
     $Password,
+    $ProcessCap = 2,
+    $7zThreads  = 4,
     [switch]$FirstDiskOnly
 )
 
@@ -48,6 +56,7 @@ if ($Name){
 }
 if ($VMs.Count -eq 0){
     Write-Warning "No VMs found"
+    return
 }
 
 if ($Password){
@@ -65,20 +74,20 @@ if (Test-Path $ZipExe){
     $Zip = $false
     $StepCount=$VMs.count
 }
-$CurrentCount=0
-$CompletedVMs = @()
-$ExportFail = $null
-$PTitle= "Backing up VM(s): $($VMs.count)"
+$CurrentCount = 0
+$7zProcess    = [System.Collections.ArrayList]@()
+$PTitle       = "Backing up VM(s): $($VMs.count)"
 
 #verify export path
 if (!(Test-Path -Path $ExportPath)){
-    Write-Error "Export path does unrechable. Please verify the path."
+    Write-Error "Export path is unrechable. Please verify the path."
+    return
 }
 
-
 :VMLoop foreach ($VM in $VMs) {
+    $ExportFail   = $null
     $TempPath="$ExportPath\$($VM.Name).temp"
-    Remove-Variable -Name MoveFail,ExtraDisks,VMOn -ErrorAction SilentlyContinue
+    Remove-Variable -Name MoveFail,ExtraDisks,VMOn -ErrorAction Ignore
     $Percent=[math]::Round($CurrentCount/$StepCount*100)
 
     if ($FirstDiskOnly){
@@ -171,40 +180,50 @@ if (!(Test-Path -Path $ExportPath)){
                     }
                 }
             }
+            #run compression if 7zip is installed
+            if ($Zip){
+                Write-Verbose "Starting process to compress $($VM.Name)" -Verbose
+                $FileName = "$($VM.Name)-$(Get-Date -Format "yy-MM-dd")"
+                #child script
+                $ChildScript = "while ((Get-Process 7z -ErrorAction SilentlyContinue).Count -ge $ProcessCap){Start-Sleep -Seconds (Get-Random -Minimum 2 -Maximum 30)}; & '$ZipExe' a '$FileName' '$($VM.Name)' $EncryptArgs -mmt=$7zThreads -bsp1; if (Test-Path '$FileName.7z'){Remove-Item -Recurse -Force '$($VM.Name)'}"
 
-            $CompletedVMs += $VM.Name
+                $7zProcess.Add((Start-Process powershell.exe -WorkingDirectory $ExportPath -ArgumentList "-NoProfile -Command `"$ChildScript`"" <#-WindowStyle Hidden#> -PassThru)) > $null
+            }
         }
     }
     $CurrentCount++
 }
 
-#Compress if 7zip is installed
-if ($Zip -and ($CompletedVMs)){
-    Write-Verbose "Compressing Exports"
-    
-    #use half of available threads
-    $MMT = ((Get-CimInstance Win32_Processor).NumberOfLogicalProcessors | Measure-Object -Sum).Sum / 2
+if ($Zip){
+    Write-Progress -Activity $PTitle -Status "Compressing VMs" -PercentComplete $Percent -Id 1
+    #loop while waiting for 7zip processes to finish
+    $TotalJobs = $7zProcess.Count
+    Write-Verbose "Waiting for $TotalJobs 7zip processes to finish" -Verbose
+    if ($TotalJobs -gt 0) {
+        while ($true) {
+            $7zProcess | ForEach-Object { $_.Refresh() }
+            $RemainingJobs = $7zProcess | Where-Object { -not $_.HasExited }
+            $RemainingCount = $RemainingJobs.Count
+            $CompletedCount = $TotalJobs - $RemainingCount
 
-    Set-Location $ExportPath
+            # Calculate overall completion percentage
+            $Percent = [math]::Round(($CompletedCount / $TotalJobs) * 100)
 
-    foreach ($CompletedVM in $CompletedVMs){
-        Write-Verbose "Compressing $CompletedVM"
-        $Percent=[math]::Round($CurrentCount/$StepCount*100)
-        Write-Progress -Activity $PTitle -Status "Compressing $CompletedVM" -PercentComplete $Percent -Id 1
-        $FileName = "$CompletedVM-$(Get-Date -Format "yy-MM-dd")"
-        Start-Process -FilePath $ZipExe -ArgumentList "a $FileName $CompletedVM $EncryptArgs -mmt=$MMT -bsp1" -NoNewWindow -Wait
-        
-        if (Test-Path "$FileName.7z"){
-            Write-Verbose "Deleting uncompressed files"
-            remove-item -Recurse -Force $CompletedVM
+            Write-Progress -Activity $PTitle `
+                        -Status "Compressing VMs ($CompletedCount/$TotalJobs complete - $RemainingCount running)" `
+                        -PercentComplete $Percent `
+                        -Id 2
+
+            #Exit loop when all background jobs have finished
+            if ($RemainingCount -eq 0) { break }
+
+            Start-Sleep -Seconds 2
         }
-        $CurrentCount++
+
+        Write-Progress -Activity $PTitle -Status "All compressions complete" -Completed -Id 2
     }
-    Write-Progress -Activity "Compressing" -Id 2 -Completed
 }else{
-    if (!$Zip){
-        Write-Output "7zip can be used to compress and archive VMs. Install 7zip or use custom install path in launch arguments."
-    }
+    Write-Output "7zip can be used to compress and archive VMs. Install 7zip or use custom install path in launch arguments."
 }
 
 Write-Progress -Activity $PTitle -Id 1 -Completed
