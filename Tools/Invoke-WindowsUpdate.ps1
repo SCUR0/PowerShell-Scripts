@@ -44,12 +44,19 @@ param (
 	[switch]$NoNewWindow
 )
 
+function Get-PendingRestart {
+	If (Test-Path -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'){
+		Write-Output "Pending restart flag found for $env:COMPUTERNAME. Restarting"
+		Restart-Computer -Force -ErrorAction SilentlyContinue
+	}
+}
+
 function Load-PSWindowsUpdate {
 	#Force TLS Verion
 	[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 	$ModuleError = $null
-	$NuGet = Get-PackageProvider | where {$_.Name -like 'NuGet'}
+	$NuGet = Get-PackageProvider | Where-Object {$_.Name -like 'NuGet'}
 	if (!$NuGet){
 		Write-Warning 'Installing NuGet Package Provider'
 		Install-PackageProvider NuGet -Force | Out-Null
@@ -77,69 +84,69 @@ function Load-PSWindowsUpdate {
 }
 
 function View-UpdateProgress {
-    param (
-        [switch]$Fresh
-    )
+	param (
+		[switch]$Fresh
+	)
 
-    $StartTime = get-date
+	$StartTime = get-date
 
-    if ($UpdateNumber){
-        $UpdateNumberLog = $UpdateNumber
-    }
+	if ($UpdateNumber){
+		$UpdateNumberLog = $UpdateNumber
+	}
 
-    #Show update status until the amount of installed updates equals the same as the amount of updates available
+	#Show update status until the amount of installed updates equals the same as the amount of updates available
 	$InstalledNumber = $DownloadNumber = 0
 
-    if ($ComputerName){
+	if ($ComputerName){
 
-	    #temp drive for tracking updates
-	    $DriveName = "WUDrive-$($ComputerName -replace '\.','')"
+		#temp drive for tracking updates
+		$DriveName = "WUDrive-$($ComputerName -replace '\.','')"
 
-	    #Remove PSDrive if exists (script interupted)
-	    Get-PSDrive | Where-Object {$_.Name -like  'WUDrive-*'} | Remove-PSDrive
+		#Remove PSDrive if exists (script interupted)
+		Get-PSDrive | Where-Object {$_.Name -like  'WUDrive-*'} | Remove-PSDrive
 
-	    $global:DrivePara = @{
-		    Name = $DriveName
-		    PSProvider = 'FileSystem'
-		    ErrorAction = 'Stop'
-	    }
-	    $DrivePara.Add('Root',"\\$ComputerName\c$")
+		$global:DrivePara = @{
+			Name = $DriveName
+			PSProvider = 'FileSystem'
+			ErrorAction = 'Stop'
+		}
+		$DrivePara.Add('Root',"\\$ComputerName\c$")
 
-	    if ($Credential){
-		    $DrivePara.Add('Credential',$Credential)
-	    }
-	    #create temp drive
-	    New-PSDrive @DrivePara | out-null
-	    $LogPath = "$($DrivePara.Name):\ProgramData\AdminScripts\PSWindowsUpdate.log"
-    }else{
-        $LogPath = "$Env:ProgramData\AdminScripts\PSWindowsUpdate.log"
-    }
+		if ($Credential){
+			$DrivePara.Add('Credential',$Credential)
+		}
+		#create temp drive
+		New-PSDrive @DrivePara | out-null
+		$LogPath = "$($DrivePara.Name):\ProgramData\AdminScripts\PSWindowsUpdate.log"
+	}else{
+		$LogPath = "$Env:ProgramData\AdminScripts\PSWindowsUpdate.log"
+	}
 	$ErrorActionPreference = 'SilentlyContinue'
-    $LogLasteWrite = (get-item "$LogPath").LastWriteTime
-    #clear log if old or fresh run
-    if ($LogLasteWrite -lt ((get-date).Addhours(((-12)))) -or ($Fresh)){
-        Clear-Content "$LogPath"
-        $UpdateLog = $null
-    }
+	$LogLasteWrite = (get-item "$LogPath").LastWriteTime
+	#clear log if old or fresh run
+	if ($LogLasteWrite -lt ((get-date).Addhours(((-12)))) -or ($Fresh)){
+		Clear-Content "$LogPath"
+		$UpdateLog = $null
+	}
 
 	do {
 		if (Test-Path "$LogPath"){
 			$UpdateLog = Get-Content "$LogPath"
-            $LogLasteWrite = (get-item "$LogPath").LastWriteTime
+			$LogLasteWrite = (get-item "$LogPath").LastWriteTime
 			if (!$UpdateLog){
 				$ProgStatus = 'Connecting to update servers'
-                
+				
 			}else{
-                if ($LogLasteWrite -ne $PreviousWrite){
-                    Clear-Host
-                    Write-Output "Start Time: $StartTime"
-                    Write-Output "`n`n`n`n`n`n`n`n$UpdateLog"
-                    $PreviousWrite = $LogLasteWrite
-                }
-                if ($null -eq $UpdateNumberLog){
-                    $UpdateNumberLog = ($UpdateLog -match '^1 .*').Count
-                    [int]$InstalledNumber = ([regex]::Matches($UpdateLog, 'Installed|Failed' )).count
-                }
+				if ($LogLasteWrite -ne $PreviousWrite){
+					Clear-Host
+					Write-Output "Start Time: $StartTime"
+					Write-Output "`n`n`n`n`n`n`n`n$UpdateLog"
+					$PreviousWrite = $LogLasteWrite
+				}
+				if ($null -eq $UpdateNumberLog){
+					$UpdateNumberLog = ($UpdateLog -match '^1 .*').Count
+					[int]$InstalledNumber = ([regex]::Matches($UpdateLog, 'Installed|Failed' )).count
+				}
 				[int]$DownloadNumber = ([regex]::Matches($UpdateLog, 'Downloaded' )).count
 				if ($DownloadNumber -ne $UpdateNumberLog){
 					$ProgStatus = "Downloading $((($UpdateLog[($DownloadNumber + 3)]) -replace '\s+', ' ').split(' ',6)[5] -join ' ')"
@@ -157,7 +164,7 @@ function View-UpdateProgress {
 				-Status $ProgStatus `
 				-PercentComplete ([Math]::Round($InstalledNumber/$UpdateNumberLog*100)) `
 				-Id 1
-            $host.ui.RawUI.WindowTitle = "$ComputerName - $DisplayNumber/$UpdateNumberLog"
+			$host.ui.RawUI.WindowTitle = "$ComputerName - $DisplayNumber/$UpdateNumberLog"
 		}
 		#Clear variables
 		$TaskState = $TaskInfo = $PingState = $null
@@ -166,11 +173,11 @@ function View-UpdateProgress {
 		$TaskState = Get-ScheduledTask 'PSWindowsUpdate' -CimSession $CimSession -ErrorAction SilentlyContinue
 		$TaskInfo = Get-ScheduledTaskInfo 'PSWindowsUpdate' -CimSession $CimSession -ErrorAction SilentlyContinue
 		$PingState = Test-Connection $ComputerName -Quiet
-        Start-Sleep -Seconds 1
+		Start-Sleep -Seconds 1
 	}until ((!($PingState)) -or ($TaskState.State -ne 'Running'))
-    
-    #check end status
-    if (!($PingState)){
+	
+	#check end status
+	if (!($PingState)){
 		Write-Error "Connection lost to $ComputerName"
 		$host.ui.RawUI.WindowTitle = "$ComputerName - Error"
 		Exit
@@ -178,19 +185,19 @@ function View-UpdateProgress {
 					
 	Write-Progress -Activity 'Installing Updates' -Completed -Id 1
 	if ($ComputerName){
-        Remove-PSDrive "$($DrivePara.Name)"
-    }
+		Remove-PSDrive "$($DrivePara.Name)"
+	}
 					
 	if ($TaskState.State -ne 'Running' -and ($TaskInfo.LastTaskResult -eq 0 -or $TaskInfo.LastTaskResult -eq 267014 -or $TaskInfo.LastTaskResult -eq 259)){  
 		Write-Output "Update Task Ended - $(get-date)"
-        if ($TaskInfo.LastTaskResult -eq 267014){
-            $host.ui.RawUI.WindowTitle = "$ComputerName - Task Canceled"
-        }else{
-		    $host.ui.RawUI.WindowTitle = "$ComputerName - Task Completed"
-            if ($Restart){
-                Write-Output "If an update required a restart, the computer will reboot shortly."
-            }
-        }
+		if ($TaskInfo.LastTaskResult -eq 267014){
+			$host.ui.RawUI.WindowTitle = "$ComputerName - Task Canceled"
+		}else{
+			$host.ui.RawUI.WindowTitle = "$ComputerName - Task Completed"
+			if ($Restart){
+				Write-Output "If an update required a restart, the computer will reboot shortly."
+			}
+		}
 	}else{
 		$host.ui.RawUI.WindowTitle = "$ComputerName - Error"
 		$TaskError = $true
@@ -331,13 +338,6 @@ if (($ComputerName) -and ($NoNewWindow -ne $true) -and (!$Credential)){
 				if ($NoFeatures){
 					$WUPara.NotCategory += 'Feature Packs'
 				}
-				##################		  Pending Restart Script Block		  ##################
-				$GetPendingRestart = {
-					If (Test-Path -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'){
-						Write-Output "Pending restart flag found for $env:COMPUTERNAME. Restarting"
-						Restart-Computer -Force -ErrorAction SilentlyContinue
-					}
-				}
 
 				if ($ComputerName){
 					$updates = Invoke-Command -session $session -ScriptBlock {$a=$args[0];Get-WUList @a} -ArgumentList $WUPara
@@ -348,9 +348,9 @@ if (($ComputerName) -and ($NoNewWindow -ne $true) -and (!$Credential)){
 				$UpdateNumber = ($updates | Measure-Object).Count
 				if (($UpdateNumber -eq 0) -and ($Restart)){
 					if ($ComputerName){
-						Invoke-Command -session $session -ScriptBlock $GetPendingRestart
+						Invoke-Command -session $session -ScriptBlock ${function:Get-PendingRestart}
 					}else{
-						Invoke-Command -ScriptBlock $GetPendingRestart
+						Invoke-Command -ScriptBlock ${function:Get-PendingRestart}
 					}
 				}
 
@@ -408,7 +408,7 @@ if (($ComputerName) -and ($NoNewWindow -ne $true) -and (!$Credential)){
 
 						#Pause to let task start
 						Start-Sleep -Seconds 5
-     
+	 
 
 						#check if running else force to run
 						$TaskInfo = Get-ScheduledTaskInfo 'PSWindowsUpdate' -CimSession $CimSession
@@ -418,7 +418,7 @@ if (($ComputerName) -and ($NoNewWindow -ne $true) -and (!$Credential)){
 						}
 
 						#View progress function
-                        View-UpdateProgress -Fresh
+						View-UpdateProgress -Fresh
 
 						$ErrorActionPreference = 'Continue'
 				
@@ -430,9 +430,9 @@ if (($ComputerName) -and ($NoNewWindow -ne $true) -and (!$Credential)){
 						if ($UpdateNumber -eq 1){
 							#Antivirus updates sometimes occur on second run and doesn't reboot afterwards
 							if ($ComputerName){
-								Invoke-Command -session $session -ScriptBlock $GetPendingRestart
+								Invoke-Command -session $session -ScriptBlock ${function:Get-PendingRestart}
 							}else{
-								Invoke-Command -ScriptBlock $GetPendingRestart
+								Invoke-Command -ScriptBlock ${function:Get-PendingRestart}
 							}
 						}
 					}
@@ -444,10 +444,10 @@ if (($ComputerName) -and ($NoNewWindow -ne $true) -and (!$Credential)){
 		}else{
 			#if ($ComputerName){$host.ui.RawUI.WindowTitle = "$ComputerName - Updates Already Running"}
 			Write-Warning "Update task is still running on $ComputerName"
-            View-UpdateProgress
+			View-UpdateProgress
 		}
 	}else{
-        $host.ui.RawUI.WindowTitle = "$ComputerName - Error"
+		$host.ui.RawUI.WindowTitle = "$ComputerName - Error"
 		Write-Error "Unable to connect to $ComputerName"
 	}
 }
